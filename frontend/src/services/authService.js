@@ -1,12 +1,10 @@
-import axios from 'axios';
+import api from '../api/axiosConfig'; // Use our custom api instance
 
-const API_URL = 'http://localhost:5000/api/users/';
+const API_URL = '/api/users/'; // The path is now relative
 
 // Login user
 const login = async (userData) => {
-  const response = await axios.post(API_URL + 'login', userData);
-
-  // Axios puts the response data inside a 'data' property
+  const response = await api.post(API_URL + 'login', userData);
   return response.data;
 };
 
