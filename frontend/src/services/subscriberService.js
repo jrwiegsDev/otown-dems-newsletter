@@ -1,6 +1,6 @@
-import axios from 'axios';
+import api from '../api/axiosConfig'; // Use our custom api instance
 
-const API_URL = 'http://localhost:5000/api/subscribers/';
+const API_URL = '/api/subscribers/'; // The path is now relative
 
 // Get all subscribers
 const getSubscribers = async (token) => {
@@ -9,7 +9,7 @@ const getSubscribers = async (token) => {
       Authorization: `Bearer ${token}`,
     },
   };
-  const response = await axios.get(API_URL, config);
+  const response = await api.get(API_URL, config);
   return response.data;
 };
 
@@ -20,7 +20,7 @@ const addSubscriber = async (subscriberData, token) => {
       Authorization: `Bearer ${token}`,
     },
   };
-  const response = await axios.post(API_URL, subscriberData, config);
+  const response = await api.post(API_URL, subscriberData, config);
   return response.data;
 };
 
@@ -31,7 +31,7 @@ const deleteSubscriber = async (subscriberId, token) => {
       Authorization: `Bearer ${token}`,
     },
   };
-  const response = await axios.delete(API_URL + subscriberId, config);
+  const response = await api.delete(API_URL + subscriberId, config);
   return response.data;
 };
 
