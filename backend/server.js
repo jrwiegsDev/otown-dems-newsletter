@@ -1,19 +1,22 @@
-// server.js
-
 const express = require('express');
 require('dotenv').config();
 const mongoose = require('mongoose');
-const subscriberRoutes = require('./routes/subscriberRoutes'); // 1. IMPORT THE ROUTES
+const cors = require('cors');
+const subscriberRoutes = require('./routes/subscriberRoutes');
+const userRoutes = require('./routes/userRoutes');
+const newsletterRoutes = require('./routes/newsletterRoutes'); // <-- 1. IMPORT
 
 const app = express();
 
-// Middleware to parse JSON bodies
-app.use(express.json()); // 2. ADD THIS MIDDLEWARE
+app.use(cors());
+app.use(express.json());
 
 const PORT = process.env.PORT || 8000;
 
-// --- Main Route for the API ---
-app.use('/api/subscribers', subscriberRoutes); // 3. USE THE ROUTES
+// --- Main Routes for the API ---
+app.use('/api/subscribers', subscriberRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/newsletter', newsletterRoutes); // <-- 2. USE THE ROUTE
 
 // --- Connect to MongoDB ---
 mongoose.connect(process.env.MONGO_URI)

@@ -1,13 +1,13 @@
+// backend/models/subscriberModel.js
 const mongoose = require('mongoose');
 
 const subscriberSchema = new mongoose.Schema({
-  firstName: {
+  firstName: { // <-- No longer required
     type: String,
-    required: [true, 'Please provide a first name'],
     trim: true
   },
   lastName: {
-    type: String, // Not required, so we just define the type
+    type: String,
     trim: true
   },
   email: {
