@@ -2,12 +2,12 @@
 
 const express = require('express');
 const router = express.Router();
-const Subscriber = require('../models/subscriberModel'); // Go up one level to find 'models'
+const Subscriber = require('../models/subscriberModel');
+const { protect } = require('../middleware/authMiddleware'); // <-- 1. IMPORT THIS
 
 // @desc   Get all subscribers
 // @route  GET /api/subscribers
-// @access Private (will be later)
-router.get('/', async (req, res) => {
+router.get('/', protect, async (req, res) => { // <-- 2. ADD PROTECT HERE
   try {
     const subscribers = await Subscriber.find({});
     res.status(200).json(subscribers);
@@ -18,37 +18,30 @@ router.get('/', async (req, res) => {
 
 // @desc   Add a new subscriber
 // @route  POST /api/subscribers
-// @access Private (will be later)
-router.post('/', async (req, res) => {
+router.post('/', protect, async (req, res) => { // <-- 2. ADD PROTECT HERE
   try {
-    // Get the data from the request body
     const { firstName, lastName, email } = req.body;
 
-    // Basic validation
     if (!firstName || !email) {
       return res.status(400).json({ message: 'Please provide a first name and email' });
     }
 
-    // Create the new subscriber in the database
     const newSubscriber = await Subscriber.create({
       firstName,
       lastName,
       email
     });
 
-    // Send a success response back with the new data
     res.status(201).json(newSubscriber);
 
   } catch (error) {
-    // Handle errors (e.g., duplicate email)
     res.status(500).json({ message: 'Error adding subscriber', error: error.message });
   }
 });
 
 // @desc   Delete a subscriber
 // @route  DELETE /api/subscribers/:id
-// @access Private (will be later)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, async (req, res) => { // <-- 2. ADD PROTECT HERE
   try {
     const subscriberId = req.params.id;
     const subscriber = await Subscriber.findByIdAndDelete(subscriberId);
