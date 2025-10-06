@@ -24,6 +24,19 @@ const addSubscriber = async (subscriberData, token) => {
   return response.data;
 };
 
+// --- THIS IS THE NEW FUNCTION ---
+// Update a subscriber
+const updateSubscriber = async (subscriberId, subscriberData, token) => {
+  const config = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+  const response = await api.put(API_URL + subscriberId, subscriberData, config);
+  return response.data;
+};
+// --------------------------------
+
 // Delete a subscriber
 const deleteSubscriber = async (subscriberId, token) => {
   const config = {
@@ -38,6 +51,7 @@ const deleteSubscriber = async (subscriberId, token) => {
 const subscriberService = {
   getSubscribers,
   addSubscriber,
+  updateSubscriber, // <-- ADDED TO EXPORT
   deleteSubscriber,
 };
 
