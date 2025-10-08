@@ -4,7 +4,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const subscriberRoutes = require('./routes/subscriberRoutes');
 const userRoutes = require('./routes/userRoutes');
-const newsletterRoutes = require('./routes/newsletterRoutes'); // <-- 1. IMPORT
+const newsletterRoutes = require('./routes/newsletterRoutes');
+const eventRoutes = require('./routes/eventRoutes');
 
 const app = express();
 
@@ -16,7 +17,8 @@ const PORT = process.env.PORT || 8000;
 // --- Main Routes for the API ---
 app.use('/api/subscribers', subscriberRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/newsletter', newsletterRoutes); // <-- 2. USE THE ROUTE
+app.use('/api/newsletter', newsletterRoutes);
+app.use('/api/events', eventRoutes);
 
 // --- Connect to MongoDB ---
 mongoose.connect(process.env.MONGO_URI)

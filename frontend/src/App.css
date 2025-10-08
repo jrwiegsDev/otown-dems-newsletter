@@ -1,0 +1,121 @@
+/* --- DARK MODE CALENDAR STYLES (DEFAULT) --- */
+.dark .react-calendar {
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    background-color: #2D3748;
+    /* gray.700 */
+    padding: 10px;
+}
+
+.dark .react-calendar__navigation button,
+.dark .react-calendar__month-view__days__day {
+    color: #E2E8F0;
+    /* gray.200 */
+}
+
+.dark .react-calendar__month-view__days__day--neighboringMonth {
+    color: #718096;
+    /* gray.500 */
+}
+
+.dark .react-calendar__tile:enabled:hover,
+.dark .react-calendar__tile:enabled:focus {
+    background-color: #4A5568;
+    /* gray.600 */
+    border-radius: 50%;
+}
+
+.dark .react-calendar__tile--now {
+    background: #4A5568;
+    /* gray.600 */
+    border-radius: 50%;
+}
+
+/* --- LIGHT MODE CALENDAR STYLES --- */
+.light .react-calendar {
+    width: 100%;
+    border: 1px solid #E2E8F0;
+    /* gray.200 */
+    border-radius: 8px;
+    background-color: white;
+    padding: 10px;
+}
+
+.light .react-calendar__navigation button,
+.light .react-calendar__month-view__days__day {
+    color: #1A202C;
+    /* gray.800 */
+}
+
+.light .react-calendar__month-view__days__day--neighboringMonth {
+    color: #A0AEC0;
+    /* gray.400 */
+}
+
+.light .react-calendar__tile:enabled:hover,
+.light .react-calendar__tile:enabled:focus {
+    background-color: #EDF2F7;
+    /* gray.100 */
+    border-radius: 50%;
+}
+
+.light .react-calendar__tile--now {
+    background: #E2E8F0;
+    /* gray.200 */
+    border-radius: 50%;
+}
+
+/* --- UNIVERSAL STYLES (Apply in both modes) --- */
+.react-calendar__navigation button {
+    min-width: 44px;
+    background: none;
+    font-size: 16px;
+    margin-top: 8px;
+}
+
+.react-calendar__tile {
+    background: none;
+    border: none;
+    text-align: center;
+    height: 40px;
+}
+
+.react-calendar__tile--active {
+    background: #3182CE;
+    /* blue.500 */
+    color: white !important;
+    border-radius: 50%;
+}
+
+.react-calendar__tile--active:enabled:hover,
+.react-calendar__tile--active:enabled:focus {
+    background: #2B6CB0;
+    /* blue.600 */
+}
+
+/* --- UPDATED EVENT DAY STYLES --- */
+.event-day {
+    font-weight: bold;
+}
+
+/* This targets the number itself */
+.event-day abbr {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin: 0 auto;
+    border-radius: 50%;
+}
+
+/* The border color for dark mode */
+.dark .event-day abbr {
+    border: 2px solid white;
+}
+
+/* The border color for light mode */
+.light .event-day abbr {
+    border: 2px solid black;
+}
