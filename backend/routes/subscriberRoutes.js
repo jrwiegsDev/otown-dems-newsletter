@@ -18,7 +18,7 @@ router.get('/', protect, async (req, res) => {
 
 // @desc   Add a new subscriber
 // @route  POST /api/subscribers
-router.post('/', protect, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { firstName, lastName, email } = req.body;
 
