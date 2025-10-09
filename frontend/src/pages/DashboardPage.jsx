@@ -132,9 +132,9 @@ const DashboardPage = () => {
 
   const openDeleteAlert = (subscriber) => {
     setSubscriberToDelete(subscriber);
-    setIsAlertOpen(true);
+    setIsDeleteAlertOpen(true);
   };
-  const closeDeleteAlert = () => setIsAlertOpen(false);
+  const closeDeleteAlert = () => setIsDeleteAlertOpen(false);
   const handleDeleteConfirm = async () => {
     if (!subscriberToDelete) return;
     try {
