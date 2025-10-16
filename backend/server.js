@@ -9,7 +9,27 @@ const eventRoutes = require('./routes/eventRoutes');
 
 const app = express();
 
-app.use(cors());
+// --- SECURE CORS CONFIGURATION ---
+const allowedOrigins = [
+  'http://localhost:5173',           // Your local frontend
+  'https://ofallondemsnewsletter.com' // Your live frontend
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+// --- END OF CORS CONFIGURATION ---
+
 app.use(express.json());
 
 const PORT = process.env.PORT || 8000;
