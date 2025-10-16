@@ -11,8 +11,9 @@ const app = express();
 
 // --- SECURE CORS CONFIGURATION ---
 const allowedOrigins = [
-  'http://localhost:5173',           // Your local frontend
-  'https://ofallondemsnewsletter.com' // Your live frontend
+  'http://localhost:5173',               // Your local frontend
+  'https://ofallondemsnewsletter.com',   // Your LIVE newsletter app
+  'https://otown-dems-hub.onrender.com'  // ADD THIS LINE for your new live hub site
 ];
 
 const corsOptions = {
