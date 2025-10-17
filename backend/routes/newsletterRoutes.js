@@ -8,12 +8,15 @@ const { protect } = require('../middleware/authMiddleware');
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: process.env.EMAIL_PORT,
-  secure: false,
+  secure: false, 
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
 });
+
+// A helper function to create a small delay
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // @desc   Send the newsletter
 // @route  POST /api/newsletter/send
@@ -39,8 +42,8 @@ router.post('/send', protect, async (req, res) => {
       recipientEmails = subscribers.map(sub => sub.email);
     }
 
-    // --- NEW LOGIC: Send an individual email to each recipient ---
-    const sendPromises = recipientEmails.map(recipient => {
+    // --- NEW LOGIC: Loop through recipients and send one by one with a delay ---
+    for (const recipient of recipientEmails) {
       const mailOptions = {
         from: '"O\'Fallon Area Democratic Club" <newsletter@ofallonildems.org>',
         replyTo: 'ofallondems@gmail.com',
@@ -48,13 +51,15 @@ router.post('/send', protect, async (req, res) => {
         subject: subject,
         html: htmlContent,
       };
-      return transporter.sendMail(mailOptions);
-    });
 
-    // Wait for all emails to be sent
-    await Promise.all(sendPromises);
+      await transporter.sendMail(mailOptions);
+      console.log(`Email sent to ${recipient}`);
+      
+      // Wait for 200 milliseconds before sending the next email (5 emails per second)
+      await delay(200); 
+    }
 
-    res.status(200).json({ message: 'Newsletter sent successfully!' });
+    res.status(200).json({ message: `Newsletter sent successfully to ${recipientEmails.length} recipients!` });
   } catch (error) {
     console.error('Error sending newsletter:', error);
     res.status(500).json({ message: 'Failed to send newsletter' });
