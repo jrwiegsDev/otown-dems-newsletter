@@ -55,8 +55,8 @@ router.post('/send', protect, async (req, res) => {
       await transporter.sendMail(mailOptions);
       console.log(`Email sent to ${recipient}`);
       
-      // Wait for 2 seconds before sending the next email
-      await delay(2000);
+      // Wait for 5 seconds before sending the next email
+      await delay(5000);
     }
 
     res.status(200).json({ message: `Newsletter sent successfully to ${recipientEmails.length} recipients!` });
