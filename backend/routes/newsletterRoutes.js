@@ -4,9 +4,11 @@ const nodemailer = require('nodemailer');
 const Subscriber = require('../models/subscriberModel');
 const { protect } = require('../middleware/authMiddleware');
 
-// Create a "transporter" - an object that knows how to send emails
+// Create a "transporter" configured for a generic SMTP service (like MailerSend)
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
+  secure: false, // true for 465, false for other ports like 587
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -26,23 +28,24 @@ router.post('/send', protect, async (req, res) => {
   try {
     let recipientEmails = [];
 
-    // --- THIS IS THE NEW TEST MODE LOGIC ---
+    // Development mode sends only to the test recipient
     if (process.env.NODE_ENV === 'development') {
       console.log('--- RUNNING IN DEV MODE: Sending test email ---');
       recipientEmails.push(process.env.TEST_EMAIL_RECIPIENT);
     } else {
-      // Production mode: get all subscribers
+      // Production mode gets all subscribers from the database
       const subscribers = await Subscriber.find({});
       if (subscribers.length === 0) {
         return res.status(400).json({ message: 'No subscribers to send to.' });
       }
       recipientEmails = subscribers.map(sub => sub.email);
     }
-    // --- END OF NEW LOGIC ---
 
+    // Configure the email options
     const mailOptions = {
-      from: `"O'Fallon Dems Newsletter" <${process.env.EMAIL_USER}>`,
-      to: recipientEmails.join(', '), // Send to all recipients
+      from: '"O\'Fallon Area Democratic Club" <newsletter@ofallonildems.org>', // Professional sender identity
+      replyTo: 'ofallondems@gmail.com', // Where replies will actually go
+      bcc: recipientEmails, // Use BCC to protect recipient privacy
       subject: subject,
       html: htmlContent,
     };
