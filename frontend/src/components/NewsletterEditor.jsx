@@ -31,16 +31,48 @@ const NewsletterEditor = () => {
   const cancelRef = useRef();
   const onClose = () => setIsAlertOpen(false);
 
+  // --- Define the COMPREHENSIVE toolbar configuration ---
+  const modules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      [{ 'font': [] }],
+      [{ 'size': ['small', false, 'large', 'huge'] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'script': 'sub'}, { 'script': 'super' }],
+      ['blockquote', 'code-block'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'indent': '-1'}, { 'indent': '+1' }],
+      [{ 'direction': 'rtl' }],
+      [{ 'align': [] }],
+      ['link', 'image', 'video'],
+      ['clean']
+    ],
+  };
+
+  const formats = [
+    'header', 'font', 'size',
+    'bold', 'italic', 'underline', 'strike', 'color', 'background',
+    'script',
+    'blockquote', 'code-block',
+    'list', 'bullet', 'indent', 'direction',
+    'align',
+    'link', 'image', 'video',
+    'clean'
+  ];
+  // --- END OF NEW CONFIGURATION ---
+
   const handleSendConfirm = async () => {
     setIsLoading(true);
+    onClose();
     try {
-      await newsletterService.sendNewsletter(
+      const response = await newsletterService.sendNewsletter(
         { subject, htmlContent: content },
         user.token
       );
       toast({
         title: 'Success!',
-        description: 'Newsletter has been sent.',
+        description: response.message || "Newsletter sending initiated! You can close this window.",
         status: 'success',
         duration: 5000,
         isClosable: true,
@@ -50,14 +82,13 @@ const NewsletterEditor = () => {
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to send newsletter.',
+        description: error.response?.data?.message || 'Failed to initiate sending.',
         status: 'error',
         duration: 5000,
         isClosable: true,
       });
     } finally {
       setIsLoading(false);
-      onClose();
     }
   };
 
@@ -73,11 +104,13 @@ const NewsletterEditor = () => {
           />
         </FormControl>
 
-        <Box flex="1" h="100%">
+        <Box flex="1" h="100%" overflow="hidden"> {/* Added overflow hidden */}
           <ReactQuill
             theme="snow"
             value={content}
             onChange={setContent}
+            modules={modules} // <-- Pass updated modules
+            formats={formats} // <-- Pass updated formats
             style={{ height: 'calc(100% - 42px)' }}
           />
         </Box>
@@ -92,6 +125,7 @@ const NewsletterEditor = () => {
         </Button>
       </VStack>
 
+      {/* Confirmation Dialog */}
       <AlertDialog
         isOpen={isAlertOpen}
         leastDestructiveRef={cancelRef}
@@ -109,7 +143,7 @@ const NewsletterEditor = () => {
               <Button ref={cancelRef} onClick={onClose}>
                 Cancel
               </Button>
-              <Button colorScheme="green" onClick={handleSendConfirm} ml={3}>
+              <Button colorScheme="green" onClick={handleSendConfirm} ml={3} isLoading={isLoading}>
                 Confirm & Send
               </Button>
             </AlertDialogFooter>
