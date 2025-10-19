@@ -296,7 +296,7 @@ const DashboardPage = () => {
                   <Spinner />
                 </Flex>
               ) : (
-                <TableContainer mt={4} maxH="60vh" overflowY="auto">
+                <TableContainer mt={4} flex="1" overflowY="auto">
                   <Table variant="simple">
                     <Thead>
                       <Tr>
