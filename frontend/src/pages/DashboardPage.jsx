@@ -252,8 +252,8 @@ const DashboardPage = () => {
   };
 
   return (
-    <Box p={5}>
-      <Flex justifyContent="space-between" alignItems="center" mb={8}>
+    <Box p={5} h="100vh" display="flex" flexDirection="column">
+      <Flex justifyContent="space-between" alignItems="center" mb={8} flexShrink={0}>
         <Heading>
           {currentView === 'newsletter' ? 'Newsletter Dashboard' : 'Calendar Dashboard'}
         </Heading>
@@ -274,29 +274,49 @@ const DashboardPage = () => {
       </Flex>
 
       {currentView === 'newsletter' ? (
-        <Grid templateAreas={`"compose subscribers"`} gridTemplateColumns={'1fr 1fr'} gap="8">
-          <GridItem area="compose" display="flex" flexDirection="column">
-            <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column">
-              <Heading fontSize="xl" mb={4}>Compose Newsletter</Heading>
-              <NewsletterEditor />
+        <Grid templateAreas={`"compose subscribers"`} gridTemplateColumns={'1fr 1fr'} gap="8" flex="1" minH="0">
+          <GridItem area="compose" display="flex" flexDirection="column" minH="0">
+            <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column" minH="0">
+              <Heading fontSize="xl" mb={4} flexShrink={0}>Compose Newsletter</Heading>
+              <Box flex="1" minH="0">
+                <NewsletterEditor />
+              </Box>
             </Box>
           </GridItem>
-          <GridItem area="subscribers">
-            <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column">
-              <Heading fontSize="xl">Subscriber Management</Heading>
-              <AddSubscriberForm onSubscriberAdded={fetchSubscribers} />
-              <Input
-                placeholder="Search by name or email..."
-                mt={4}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+          <GridItem area="subscribers" display="flex" flexDirection="column" minH="0">
+            <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column" minH="0">
+              <Flex justifyContent="space-between" alignItems="center" flexShrink={0} mb={4}>
+                <Heading fontSize="xl">Subscriber Management</Heading>
+                <Text fontSize="lg" fontWeight="semibold" color="blue.400">
+                  Total Subscribers: {subscribers.length}
+                </Text>
+              </Flex>
+              <Box flexShrink={0}>
+                <AddSubscriberForm onSubscriberAdded={fetchSubscribers} />
+              </Box>
+              <Flex mt={4} flexShrink={0} gap={2}>
+                <Input
+                  placeholder="Search by name or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  flex="1"
+                />
+                {searchTerm && (
+                  <Button
+                    onClick={() => setSearchTerm('')}
+                    colorScheme="gray"
+                    size="md"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </Flex>
               {isLoadingSubscribers ? (
-                <Flex justify="center" align="center" flex="1">
+                <Flex justify="center" align="center" flex="1" minH="0">
                   <Spinner />
                 </Flex>
               ) : (
-                <TableContainer mt={4} flex="1" overflowY="auto">
+                <TableContainer mt={4} flex="1" overflowY="auto" minH="0">
                   <Table variant="simple">
                     <Thead>
                       <Tr>
@@ -341,16 +361,18 @@ const DashboardPage = () => {
         </Grid>
       ) : (
         // --- CALENDAR DASHBOARD GRID ---
-        <Grid templateAreas={`"calendar management"`} gridTemplateColumns={'1fr 1fr'} gap="8">
+        <Grid templateAreas={`"calendar management"`} gridTemplateColumns={'1fr 1fr'} gap="8" flex="1" minH="0">
           {/* --- LEFT COLUMN --- */}
-          <GridItem area="calendar">
-            <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column">
-              <Heading fontSize="xl">Calendar View</Heading>
-              <EventCalendar events={events} colorMode={colorMode} onDateClick={handleDateClick} />
+          <GridItem area="calendar" display="flex" flexDirection="column" minH="0">
+            <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column" minH="0">
+              <Heading fontSize="xl" flexShrink={0}>Calendar View</Heading>
+              <Box flexShrink={0}>
+                <EventCalendar events={events} colorMode={colorMode} onDateClick={handleDateClick} />
+              </Box>
 
-              <Divider my={4} />
+              <Divider my={4} flexShrink={0} />
 
-              <Heading fontSize="lg" mt={2} mb={4}>Current Events</Heading>
+              <Heading fontSize="lg" mt={2} mb={4} flexShrink={0}>Current Events</Heading>
               {isLoadingEvents ? (
                 <Spinner />
               ) : (
@@ -378,10 +400,12 @@ const DashboardPage = () => {
           </GridItem>
 
           {/* --- RIGHT COLUMN --- */}
-          <GridItem area="management">
-            <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" h="100%">
-              <Heading fontSize="xl">Event Management</Heading>
-              <AddEventForm onEventAdded={fetchEvents} />
+          <GridItem area="management" display="flex" flexDirection="column" minH="0">
+            <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column">
+              <Heading fontSize="xl" flexShrink={0}>Event Management</Heading>
+              <Box flex="1" overflowY="auto">
+                <AddEventForm onEventAdded={fetchEvents} />
+              </Box>
             </Box>
           </GridItem>
         </Grid>
