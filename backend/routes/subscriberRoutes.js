@@ -16,27 +16,60 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-// @desc   Add a new subscriber
+// @desc   Add a new subscriber (or update existing one)
 // @route  POST /api/subscribers
 router.post('/', async (req, res) => {
   try {
     const { firstName, lastName, email } = req.body;
 
-    // We removed the firstName requirement from the model, so we can remove it here too
     if (!email) {
       return res.status(400).json({ message: 'Please provide an email' });
     }
 
-    const newSubscriber = await Subscriber.create({
-      firstName,
-      lastName,
-      email
-    });
+    // Check if subscriber with this email already exists
+    const existingSubscriber = await Subscriber.findOne({ email: email.toLowerCase() });
 
-    res.status(201).json(newSubscriber);
+    if (existingSubscriber) {
+      // Update existing subscriber with new information (only if provided)
+      const updateData = {};
+      
+      // Only update firstName if provided and it's different
+      if (firstName && firstName.trim() !== '') {
+        updateData.firstName = firstName.trim();
+      }
+      
+      // Only update lastName if provided (can be empty string to clear it)
+      if (lastName !== undefined) {
+        updateData.lastName = lastName.trim();
+      }
+
+      // Update the existing subscriber
+      const updatedSubscriber = await Subscriber.findOneAndUpdate(
+        { email: email.toLowerCase() },
+        updateData,
+        { new: true, runValidators: true }
+      );
+
+      return res.status(200).json({
+        subscriber: updatedSubscriber,
+        message: 'Your information has been updated successfully!'
+      });
+    } else {
+      // Create new subscriber if email doesn't exist
+      const newSubscriber = await Subscriber.create({
+        firstName: firstName ? firstName.trim() : undefined,
+        lastName: lastName ? lastName.trim() : undefined,
+        email: email.toLowerCase()
+      });
+
+      return res.status(201).json({
+        subscriber: newSubscriber,
+        message: 'Successfully subscribed to our mailing list!'
+      });
+    }
 
   } catch (error) {
-    res.status(500).json({ message: 'Error adding subscriber', error: error.message });
+    res.status(500).json({ message: 'Error processing subscription', error: error.message });
   }
 });
 
