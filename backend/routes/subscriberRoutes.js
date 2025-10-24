@@ -2,6 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
+const validator = require('validator');
 const Subscriber = require('../models/subscriberModel');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -24,6 +25,11 @@ router.post('/', async (req, res) => {
 
     if (!email) {
       return res.status(400).json({ message: 'Please provide an email' });
+    }
+
+    // Validate email format
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({ message: 'Please provide a valid email address' });
     }
 
     // Check if subscriber with this email already exists
