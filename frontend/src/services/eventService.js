@@ -34,11 +34,19 @@ const deleteEvent = async (eventId, token) => {
   return response.data;
 };
 
+// Toggle banner event status
+const toggleBannerEvent = async (eventId, token) => {
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const response = await api.put(API_URL + eventId + '/banner', {}, config);
+  return response.data;
+};
+
 const eventService = {
   createEvent,
   getAllEvents,
   updateEvent,
   deleteEvent,
+  toggleBannerEvent,
 };
 
 export default eventService;

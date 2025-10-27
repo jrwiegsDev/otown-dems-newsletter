@@ -17,6 +17,10 @@ const eventSchema = new mongoose.Schema({
   eventDescription: {
     type: String,
     trim: true
+  },
+  isBannerEvent: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true // Automatically adds createdAt and updatedAt
