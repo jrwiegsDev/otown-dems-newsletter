@@ -1,7 +1,9 @@
 import Calendar from 'react-calendar';
-import { Box } from '@chakra-ui/react';
+import { Box, useColorMode } from '@chakra-ui/react';
 
-const EventCalendar = ({ events, colorMode, onDateClick }) => {
+const EventCalendar = ({ events, onDateClick }) => {
+  const { colorMode } = useColorMode();
+  
   const eventDates = new Set(
     events.map(event => {
       const date = new Date(event.eventDate);

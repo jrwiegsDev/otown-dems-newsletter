@@ -9,6 +9,7 @@ const subscriberRoutes = require('./routes/subscriberRoutes');
 const userRoutes = require('./routes/userRoutes');
 const newsletterRoutes = require('./routes/newsletterRoutes');
 const eventRoutes = require('./routes/eventRoutes');
+const announcementRoutes = require('./routes/announcementRoutes');
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/subscribers', subscriberRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/announcements', announcementRoutes);
 
 // --- 3. Create an HTTP server using the Express app ---
 // This allows both Express (HTTP) and WebSockets (WS) to run on the same port.
