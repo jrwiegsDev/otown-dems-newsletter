@@ -15,6 +15,7 @@ const app = express();
 // --- SECURE CORS CONFIGURATION ---
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:5174',
   'https://ofallondemsnewsletter.com',
   'https://otown-dems-hub.onrender.com',
   'https://ofallonildems.org'
