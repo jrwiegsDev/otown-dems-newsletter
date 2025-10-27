@@ -93,6 +93,41 @@ const NewsletterDashboard = ({
     }
   };
 
+  const handleExportSignInSheet = () => {
+    // Sort subscribers alphabetically by last name, then first name
+    const sortedSubscribers = [...subscribers].sort((a, b) => {
+      const lastNameCompare = (a.lastName || '').localeCompare(b.lastName || '');
+      if (lastNameCompare !== 0) return lastNameCompare;
+      return (a.firstName || '').localeCompare(b.firstName || '');
+    });
+
+    // Create CSV content with headers and padding for better column widths
+    let csvContent = 'First Name,Last Name,Provide Email if Desired,Check-In\n';
+    
+    // Add each subscriber as a row with empty cells padded with spaces
+    sortedSubscribers.forEach(subscriber => {
+      const firstName = (subscriber.firstName || '').replace(/,/g, '');
+      const lastName = (subscriber.lastName || '').replace(/,/g, '');
+      // Add padding spaces to make columns wider when opened in spreadsheet apps
+      csvContent += `${firstName}${' '.repeat(Math.max(0, 20 - firstName.length))},${lastName}${' '.repeat(Math.max(0, 20 - lastName.length))},${''.padEnd(40)},${''.padEnd(15)}\n`;
+    });
+
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // Use current date for filename
+    const date = new Date().toISOString().split('T')[0];
+    link.setAttribute('download', `meeting-sign-in-sheet-${date}.csv`);
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <>
       <Grid templateAreas={`"compose subscribers"`} gridTemplateColumns={'1fr 1fr'} gap="8" flex="1" minH="0">
@@ -109,9 +144,18 @@ const NewsletterDashboard = ({
           <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column" minH="0">
             <Flex justifyContent="space-between" alignItems="center" flexShrink={0} mb={4}>
               <Heading fontSize="xl">Subscriber Management</Heading>
-              <Text fontSize="lg" fontWeight="semibold" color="blue.400">
-                Total Subscribers: {subscribers.length}
-              </Text>
+              <Flex gap={3} alignItems="center">
+                <Text fontSize="lg" fontWeight="semibold" color="blue.400">
+                  Total Subscribers: {subscribers.length}
+                </Text>
+                <Button
+                  colorScheme="teal"
+                  size="sm"
+                  onClick={handleExportSignInSheet}
+                >
+                  📋 Export Sign-In Sheet
+                </Button>
+              </Flex>
             </Flex>
             <Box flexShrink={0}>
               <AddSubscriberForm onSubscriberAdded={fetchSubscribers} />
