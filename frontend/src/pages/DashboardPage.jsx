@@ -6,6 +6,7 @@ import { useAnnouncements } from '../hooks/useAnnouncements';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import NewsletterDashboard from './NewsletterDashboard';
 import CalendarDashboard from './CalendarDashboard';
+import AnalyticsDashboard from './AnalyticsDashboard';
 import 'react-calendar/dist/Calendar.css';
 
 const DashboardPage = () => {
@@ -16,20 +17,25 @@ const DashboardPage = () => {
   const eventHook = useEvents(user);
   const announcementHook = useAnnouncements();
 
-  // State for dashboard view
+  // State for dashboard view - now supports 3 views
   const [currentView, setCurrentView] = useState('newsletter');
 
-  const handleViewChange = () => {
-    setCurrentView(currentView === 'newsletter' ? 'calendar' : 'newsletter');
+  const renderView = () => {
+    switch (currentView) {
+      case 'newsletter':
+        return <NewsletterDashboard {...subscriberHook} />;
+      case 'calendar':
+        return <CalendarDashboard {...eventHook} {...announcementHook} />;
+      case 'analytics':
+        return <AnalyticsDashboard />;
+      default:
+        return <NewsletterDashboard {...subscriberHook} />;
+    }
   };
 
   return (
-    <DashboardLayout currentView={currentView} onViewChange={handleViewChange}>
-      {currentView === 'newsletter' ? (
-        <NewsletterDashboard {...subscriberHook} />
-      ) : (
-        <CalendarDashboard {...eventHook} {...announcementHook} />
-      )}
+    <DashboardLayout currentView={currentView} onViewChange={setCurrentView}>
+      {renderView()}
     </DashboardLayout>
   );
 };

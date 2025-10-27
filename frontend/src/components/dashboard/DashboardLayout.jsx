@@ -23,11 +23,16 @@ const DashboardLayout = ({ currentView, onViewChange, children }) => {
   };
 
   const getViewTitle = () => {
-    return currentView === 'newsletter' ? 'Newsletter Dashboard' : 'Calendar Dashboard';
-  };
-
-  const getViewButtonText = () => {
-    return currentView === 'newsletter' ? 'Calendar' : 'Newsletter';
+    switch (currentView) {
+      case 'newsletter':
+        return 'Newsletter Dashboard';
+      case 'calendar':
+        return 'Calendar Dashboard';
+      case 'analytics':
+        return 'Analytics Dashboard';
+      default:
+        return 'Dashboard';
+    }
   };
 
   return (
@@ -37,8 +42,26 @@ const DashboardLayout = ({ currentView, onViewChange, children }) => {
         <Heading>{getViewTitle()}</Heading>
         <Stack direction="row" spacing={4} alignItems="center">
           {user && <Text>Welcome, {user.username}!</Text>}
-          <Button onClick={onViewChange}>
-            Switch to {getViewButtonText()} View
+          <Button 
+            onClick={() => onViewChange('newsletter')}
+            colorScheme={currentView === 'newsletter' ? 'blue' : 'gray'}
+            variant={currentView === 'newsletter' ? 'solid' : 'outline'}
+          >
+            Newsletter
+          </Button>
+          <Button 
+            onClick={() => onViewChange('calendar')}
+            colorScheme={currentView === 'calendar' ? 'blue' : 'gray'}
+            variant={currentView === 'calendar' ? 'solid' : 'outline'}
+          >
+            Calendar
+          </Button>
+          <Button 
+            onClick={() => onViewChange('analytics')}
+            colorScheme={currentView === 'analytics' ? 'blue' : 'gray'}
+            variant={currentView === 'analytics' ? 'solid' : 'outline'}
+          >
+            Analytics
           </Button>
           <IconButton
             onClick={toggleColorMode}

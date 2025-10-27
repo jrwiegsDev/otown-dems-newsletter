@@ -4,12 +4,14 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http'); // 1. Import the 'http' module
 const WebSocket = require('ws'); // 2. Import the 'ws' library
+const { startPollScheduler } = require('./utils/pollScheduler'); // Import poll scheduler
 
 const subscriberRoutes = require('./routes/subscriberRoutes');
 const userRoutes = require('./routes/userRoutes');
 const newsletterRoutes = require('./routes/newsletterRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const announcementRoutes = require('./routes/announcementRoutes');
+const pollRoutes = require('./routes/pollRoutes');
 
 const app = express();
 
@@ -47,6 +49,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/announcements', announcementRoutes);
+app.use('/api/poll', pollRoutes);
 
 // --- 3. Create an HTTP server using the Express app ---
 // This allows both Express (HTTP) and WebSockets (WS) to run on the same port.
@@ -69,6 +72,20 @@ function broadcastUserCount() {
     }
   });
 }
+
+// --- Poll Results Broadcast Function ---
+function broadcastPollResults(results) {
+  const message = JSON.stringify({ type: 'pollResults', data: results });
+  console.log(`Broadcasting poll results update`);
+  clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+}
+
+// Make broadcastPollResults available globally
+global.broadcastPollResults = broadcastPollResults;
 
 // --- 7. Handle WebSocket connections ---
 wss.on('connection', (ws) => {
@@ -100,6 +117,10 @@ wss.on('connection', (ws) => {
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('Successfully connected to MongoDB');
+    
+    // Start the poll scheduler
+    startPollScheduler();
+    
     // Start the HTTP server, which now also handles WebSocket connections
     server.listen(PORT, () => {
       console.log(`Server (HTTP & WS) is running on port ${PORT}`);
