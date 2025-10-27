@@ -46,6 +46,7 @@ import {
   VStack,
   Textarea,
   Divider,
+  Checkbox,
 } from '@chakra-ui/react';
 import { MoonIcon, SunIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
 import EventCalendar from '../components/EventCalendar';
@@ -251,6 +252,62 @@ const DashboardPage = () => {
     }
   };
 
+  // --- NEW: Handler for toggling banner event ---
+  const handleBannerToggle = async (event) => {
+    // Check if event is in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const eventDate = new Date(event.eventDate);
+    const correctedDate = new Date(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate());
+    
+    if (correctedDate < today) {
+      toast({ 
+        title: 'Cannot set past events as banner event', 
+        status: 'warning', 
+        duration: 3000, 
+        isClosable: true 
+      });
+      return;
+    }
+
+    try {
+      const updatedEvent = await eventService.toggleBannerEvent(event._id, user.token);
+      // Update the events list
+      setEvents(events.map(e => {
+        if (e._id === updatedEvent._id) {
+          return updatedEvent;
+        } else if (updatedEvent.isBannerEvent && e.isBannerEvent) {
+          // If the updated event is now banner, unset others
+          return { ...e, isBannerEvent: false };
+        }
+        return e;
+      }));
+      toast({ 
+        title: updatedEvent.isBannerEvent ? 'Banner event set' : 'Banner event removed', 
+        status: 'success', 
+        duration: 3000, 
+        isClosable: true 
+      });
+    } catch (error) {
+      toast({ 
+        title: 'Error toggling banner event', 
+        description: error.response?.data?.message || 'An error occurred',
+        status: 'error', 
+        duration: 5000, 
+        isClosable: true 
+      });
+    }
+  };
+
+  // --- Helper to check if event is in the past ---
+  const isEventPast = (eventDate) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const date = new Date(eventDate);
+    const correctedDate = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+    return correctedDate < today;
+  };
+
   return (
     <Box p={5} h="100vh" display="flex" flexDirection="column">
       <Flex justifyContent="space-between" alignItems="center" mb={8} flexShrink={0}>
@@ -379,19 +436,30 @@ const DashboardPage = () => {
                 <VStack spacing={4} align="stretch" flex="1" overflowY="auto" minH="0" pr={2}>
                   {events.map((event) => (
                     <Box key={event._id} p={4} borderWidth="1px" borderRadius="md">
-                      <Flex justifyContent="space-between" alignItems="center">
-                        <Box>
+                      <Flex justifyContent="space-between" alignItems="flex-start">
+                        <Box flex="1">
                           <Heading fontSize="md">{event.eventName}</Heading>
                           <Text fontSize="sm" color="gray.500">
                             {new Date(event.eventDate).toLocaleDateString('en-US', { timeZone: 'UTC' })} at {event.eventTime}
                           </Text>
+                          <Text mt={2}>{event.eventDescription}</Text>
                         </Box>
-                        <Stack direction="row">
-                          <IconButton icon={<EditIcon />} size="sm" colorScheme="yellow" onClick={() => openEventEditModal(event)} />
-                          <IconButton icon={<DeleteIcon />} size="sm" colorScheme="red" onClick={() => openEventDeleteAlert(event)} />
-                        </Stack>
+                        <Flex direction="column" alignItems="flex-end" gap={2}>
+                          <Flex alignItems="center" gap={2}>
+                            <Text fontSize="sm" whiteSpace="nowrap">Banner Event?</Text>
+                            <Checkbox 
+                              isChecked={event.isBannerEvent || false}
+                              onChange={() => handleBannerToggle(event)}
+                              isDisabled={isEventPast(event.eventDate)}
+                              colorScheme="blue"
+                            />
+                          </Flex>
+                          <Stack direction="row">
+                            <IconButton icon={<EditIcon />} size="sm" colorScheme="yellow" onClick={() => openEventEditModal(event)} />
+                            <IconButton icon={<DeleteIcon />} size="sm" colorScheme="red" onClick={() => openEventDeleteAlert(event)} />
+                          </Stack>
+                        </Flex>
                       </Flex>
-                      <Text mt={2}>{event.eventDescription}</Text>
                     </Box>
                   ))}
                 </VStack>

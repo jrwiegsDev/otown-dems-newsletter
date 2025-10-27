@@ -69,4 +69,40 @@ router.delete('/:id', protect, async (req, res) => {
   }
 });
 
+// @desc   Toggle banner event status
+// @route  PUT /api/events/:id/banner
+// @access Private
+router.put('/:id/banner', protect, async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Check if event is in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const eventDate = new Date(event.eventDate);
+    eventDate.setHours(0, 0, 0, 0);
+    
+    if (eventDate < today) {
+      return res.status(400).json({ message: 'Cannot set past events as banner event' });
+    }
+
+    // If setting this event as banner, unset all other banner events
+    if (!event.isBannerEvent) {
+      await Event.updateMany({ _id: { $ne: req.params.id } }, { isBannerEvent: false });
+      event.isBannerEvent = true;
+    } else {
+      event.isBannerEvent = false;
+    }
+
+    const updatedEvent = await event.save();
+    res.json(updatedEvent);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
 module.exports = router;
