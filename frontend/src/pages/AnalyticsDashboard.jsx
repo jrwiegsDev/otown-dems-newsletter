@@ -273,6 +273,7 @@ const AnalyticsDashboard = () => {
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const textColor = useColorModeValue('gray.800', 'white');
+  const tableHeaderBg = useColorModeValue('blue.500', 'blue.700');
 
   if (loading) {
     return (
@@ -430,7 +431,7 @@ const AnalyticsDashboard = () => {
           overflowY="auto"
         >
           <Table variant="simple">
-            <Thead position="sticky" top={0} bg={useColorModeValue('blue.500', 'blue.700')} zIndex={1}>
+            <Thead position="sticky" top={0} bg={tableHeaderBg} zIndex={1}>
               <Tr>
                 <Th color="white">Week</Th>
                 <Th color="white">Date Range</Th>
