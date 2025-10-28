@@ -59,7 +59,7 @@ const CalendarDashboard = ({
   const [eventToDelete, setEventToDelete] = useState(null);
   const { isOpen: isEventEditModalOpen, onOpen: onEventEditModalOpen, onClose: onEventEditModalClose } = useDisclosure();
   const [eventToEdit, setEventToEdit] = useState(null);
-  const [editEventFormData, setEditEventFormData] = useState({ eventName: '', eventDate: '', eventTime: '', eventDescription: '' });
+  const [editEventFormData, setEditEventFormData] = useState({ eventName: '', eventDate: '', eventTime: '', eventDescription: '', eventLink: '', eventLinkText: '' });
 
   const handleDateClick = (date) => {
     const eventsOnDate = getEventsForDate(date);
@@ -94,6 +94,8 @@ const CalendarDashboard = ({
       eventDate: new Date(event.eventDate).toISOString().split('T')[0],
       eventTime: event.eventTime || '',
       eventDescription: event.eventDescription || '',
+      eventLink: event.eventLink || '',
+      eventLinkText: event.eventLinkText || 'Learn More',
     });
     onEventEditModalOpen();
   };
@@ -226,7 +228,9 @@ const CalendarDashboard = ({
               <FormControl><FormLabel>Event Name</FormLabel><Input name="eventName" value={editEventFormData.eventName} onChange={handleEventEditFormChange} /></FormControl>
               <FormControl><FormLabel>Event Date</FormLabel><Input name="eventDate" type="date" value={editEventFormData.eventDate} onChange={handleEventEditFormChange} /></FormControl>
               <FormControl><FormLabel>Event Time</FormLabel><Input name="eventTime" value={editEventFormData.eventTime} onChange={handleEventEditFormChange} /></FormControl>
-              <FormControl><FormLabel>Description / Location</FormLabel><Textarea name="eventDescription" value={editEventFormData.eventDescription} onChange={handleEventEditFormChange} /></FormControl>
+              <FormControl><FormLabel>Description / Location</FormLabel><Textarea name="eventDescription" value={editEventFormData.eventDescription} onChange={handleEventEditFormChange} placeholder="Press Enter for line breaks" /></FormControl>
+              <FormControl><FormLabel>Event Link (optional)</FormLabel><Input name="eventLink" type="url" value={editEventFormData.eventLink} onChange={handleEventEditFormChange} placeholder="https://eventbrite.com/..." /></FormControl>
+              <FormControl><FormLabel>Link Button Text (optional)</FormLabel><Input name="eventLinkText" value={editEventFormData.eventLinkText} onChange={handleEventEditFormChange} placeholder="Buy Tickets" /></FormControl>
             </VStack>
           </ModalBody>
           <ModalFooter>

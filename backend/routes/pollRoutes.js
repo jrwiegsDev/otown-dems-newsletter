@@ -179,11 +179,16 @@ router.get('/results', async (req, res) => {
       });
     });
 
+    // Sort issues by vote count (descending)
+    const sortedIssues = VALID_ISSUES.slice().sort((a, b) => {
+      return issueCounts[b] - issueCounts[a];
+    });
+
     res.status(200).json({
       weekIdentifier,
       totalVotes: votes.length,
       issueCounts,
-      issues: VALID_ISSUES
+      issues: sortedIssues
     });
 
   } catch (error) {

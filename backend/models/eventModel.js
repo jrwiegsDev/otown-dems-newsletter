@@ -18,6 +18,15 @@ const eventSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  eventLink: {
+    type: String,
+    trim: true
+  },
+  eventLinkText: {
+    type: String,
+    trim: true,
+    default: 'Learn More'
+  },
   isBannerEvent: {
     type: Boolean,
     default: false
