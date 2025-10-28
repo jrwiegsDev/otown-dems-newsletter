@@ -19,6 +19,8 @@ const AddEventForm = ({ onEventAdded }) => {
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [eventDescription, setEventDescription] = useState('');
+  const [eventLink, setEventLink] = useState('');
+  const [eventLinkText, setEventLinkText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -26,7 +28,7 @@ const AddEventForm = ({ onEventAdded }) => {
     setIsLoading(true);
     try {
       await eventService.createEvent(
-        { eventName, eventDate, eventTime, eventDescription },
+        { eventName, eventDate, eventTime, eventDescription, eventLink, eventLinkText },
         user.token
       );
       toast({
@@ -41,6 +43,8 @@ const AddEventForm = ({ onEventAdded }) => {
       setEventDate('');
       setEventTime('');
       setEventDescription('');
+      setEventLink('');
+      setEventLinkText('');
       onEventAdded();
     } catch (error) {
       toast({
@@ -86,7 +90,24 @@ const AddEventForm = ({ onEventAdded }) => {
           <Textarea
             value={eventDescription}
             onChange={(e) => setEventDescription(e.target.value)}
-            placeholder="e.g., O'Fallon City Hall"
+            placeholder="Press Enter for line breaks. e.g., O'Fallon City Hall"
+          />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Event Link (optional)</FormLabel>
+          <Input
+            type="url"
+            value={eventLink}
+            onChange={(e) => setEventLink(e.target.value)}
+            placeholder="https://eventbrite.com/..."
+          />
+        </FormControl>
+        <FormControl>
+          <FormLabel>Link Button Text (optional)</FormLabel>
+          <Input
+            value={eventLinkText}
+            onChange={(e) => setEventLinkText(e.target.value)}
+            placeholder="Buy Tickets"
           />
         </FormControl>
         <Button type="submit" colorScheme="blue" isLoading={isLoading} alignSelf="stretch">
