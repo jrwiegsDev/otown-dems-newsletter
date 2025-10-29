@@ -44,6 +44,8 @@ import {
   StatHelpText,
 } from '@chakra-ui/react';
 import api from '../api/axiosConfig';
+import VolunteerManagement from '../components/VolunteerManagement';
+import useVolunteers from '../hooks/useVolunteers';
 
 // Register Chart.js components
 ChartJS.register(
@@ -69,6 +71,18 @@ const AnalyticsDashboard = () => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  // Use volunteers hook
+  const {
+    volunteers,
+    isLoadingVolunteers,
+    searchTerm: volunteerSearchTerm,
+    setSearchTerm: setVolunteerSearchTerm,
+    filteredVolunteers,
+    fetchVolunteers,
+    deleteVolunteer,
+    updateVolunteer,
+  } = useVolunteers(user);
 
   // WebSocket connection for real-time updates
   useEffect(() => {
@@ -293,6 +307,20 @@ const AnalyticsDashboard = () => {
 
   return (
     <VStack spacing={6} align="stretch" w="100%">
+      {/* Volunteer Management Section */}
+      <Box>
+        <VolunteerManagement
+          volunteers={volunteers}
+          isLoadingVolunteers={isLoadingVolunteers}
+          searchTerm={volunteerSearchTerm}
+          setSearchTerm={setVolunteerSearchTerm}
+          filteredVolunteers={filteredVolunteers}
+          fetchVolunteers={fetchVolunteers}
+          deleteVolunteer={deleteVolunteer}
+          updateVolunteer={updateVolunteer}
+        />
+      </Box>
+
       {/* Current Week Stats */}
       <Box>
         <Heading size="lg" mb={4}>Current Week ({currentWeekStats?.weekIdentifier})</Heading>
