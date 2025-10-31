@@ -59,13 +59,26 @@ const VolunteerManagement = ({
     firstName: '', 
     lastName: '', 
     email: '',
-    availableDays: []
+    interestedPrograms: []
   });
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
 
-  const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const VOLUNTEER_PROGRAMS = [
+    'Adopt A Highway',
+    'Christmas Toy Drive',
+    'Thanksgiving Meal Drive',
+    'Food Pantry Support',
+    'Community Garden',
+    'Literacy Tutoring',
+    'Senior Outreach',
+    'Voter Registration',
+    'School Supply Drive',
+    'Winter Coat Drive',
+    'Book Drive',
+    'Community Clean-Up Events'
+  ];
 
   const openDeleteAlert = (volunteer) => {
     setVolunteerToDelete(volunteer);
@@ -88,7 +101,7 @@ const VolunteerManagement = ({
       firstName: volunteer.firstName || '',
       lastName: volunteer.lastName || '',
       email: volunteer.email || '',
-      availableDays: volunteer.availableDays || []
+      interestedPrograms: volunteer.interestedPrograms || []
     });
     onEditModalOpen();
   };
@@ -97,12 +110,12 @@ const VolunteerManagement = ({
     setEditFormData({ ...editFormData, [e.target.name]: e.target.value });
   };
 
-  const handleDayToggle = (day) => {
+  const handleProgramToggle = (program) => {
     setEditFormData(prev => {
-      const availableDays = prev.availableDays.includes(day)
-        ? prev.availableDays.filter(d => d !== day)
-        : [...prev.availableDays, day];
-      return { ...prev, availableDays };
+      const interestedPrograms = prev.interestedPrograms.includes(program)
+        ? prev.interestedPrograms.filter(p => p !== program)
+        : [...prev.interestedPrograms, program];
+      return { ...prev, interestedPrograms };
     });
   };
 
@@ -122,7 +135,7 @@ const VolunteerManagement = ({
     });
 
     // Create CSV content with headers
-    const headers = ['First Name', 'Last Name', 'Email', 'Available Days', 'Signed Up'];
+    const headers = ['First Name', 'Last Name', 'Email', 'Programs of Interest', 'Signed Up'];
     const csvRows = [headers.join(',')];
 
     sortedVolunteers.forEach(volunteer => {
@@ -130,7 +143,7 @@ const VolunteerManagement = ({
         volunteer.firstName || '',
         volunteer.lastName || '',
         volunteer.email || '',
-        (volunteer.availableDays || []).join('; '),
+        (volunteer.interestedPrograms || []).join('; '),
         new Date(volunteer.createdAt).toLocaleDateString()
       ];
       csvRows.push(row.map(field => `"${field}"`).join(','));
@@ -197,7 +210,7 @@ const VolunteerManagement = ({
                   <Th>First Name</Th>
                   <Th>Last Name</Th>
                   <Th>Email</Th>
-                  <Th>Available Days</Th>
+                  <Th>Programs of Interest</Th>
                   <Th>Signed Up</Th>
                   <Th>Actions</Th>
                 </Tr>
@@ -210,10 +223,10 @@ const VolunteerManagement = ({
                     <Td>{volunteer.email}</Td>
                     <Td>
                       <Wrap spacing={1}>
-                        {volunteer.availableDays.map(day => (
-                          <WrapItem key={day}>
+                        {volunteer.interestedPrograms && volunteer.interestedPrograms.map(program => (
+                          <WrapItem key={program}>
                             <Badge colorScheme="blue" fontSize="0.7em">
-                              {day.substring(0, 3)}
+                              {program}
                             </Badge>
                           </WrapItem>
                         ))}
@@ -315,16 +328,16 @@ const VolunteerManagement = ({
                 />
               </FormControl>
               <FormControl isRequired>
-                <FormLabel>Available Days</FormLabel>
+                <FormLabel>Programs of Interest</FormLabel>
                 <Wrap spacing={2}>
-                  {DAYS_OF_WEEK.map(day => (
-                    <WrapItem key={day}>
+                  {VOLUNTEER_PROGRAMS.map(program => (
+                    <WrapItem key={program}>
                       <Button
                         size="sm"
-                        colorScheme={editFormData.availableDays.includes(day) ? 'blue' : 'gray'}
-                        onClick={() => handleDayToggle(day)}
+                        colorScheme={editFormData.interestedPrograms.includes(program) ? 'blue' : 'gray'}
+                        onClick={() => handleProgramToggle(program)}
                       >
-                        {day}
+                        {program}
                       </Button>
                     </WrapItem>
                   ))}
@@ -343,7 +356,7 @@ const VolunteerManagement = ({
                 !editFormData.firstName || 
                 !editFormData.lastName || 
                 !editFormData.email ||
-                editFormData.availableDays.length === 0
+                editFormData.interestedPrograms.length === 0
               }
             >
               Save Changes

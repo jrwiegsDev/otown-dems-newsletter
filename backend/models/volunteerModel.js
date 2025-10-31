@@ -19,15 +19,28 @@ const volunteerSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
-  availableDays: {
+  interestedPrograms: {
     type: [String],
-    required: [true, 'Please provide at least one available day'],
+    required: [true, 'Please select at least one program you are interested in'],
     validate: {
-      validator: function(days) {
-        const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-        return days.length > 0 && days.every(day => validDays.includes(day));
+      validator: function(programs) {
+        const validPrograms = [
+          'Adopt A Highway',
+          'Christmas Toy Drive',
+          'Thanksgiving Meal Drive',
+          'Food Pantry Support',
+          'Community Garden',
+          'Literacy Tutoring',
+          'Senior Outreach',
+          'Voter Registration',
+          'School Supply Drive',
+          'Winter Coat Drive',
+          'Book Drive',
+          'Community Clean-Up Events'
+        ];
+        return programs.length > 0 && programs.every(program => validPrograms.includes(program));
       },
-      message: 'Please provide valid days of the week'
+      message: 'Please provide valid program selections'
     }
   }
 }, {
