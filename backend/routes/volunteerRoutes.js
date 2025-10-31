@@ -34,7 +34,7 @@ router.get('/', protect, async (req, res) => {
 // @route  POST /api/volunteers
 router.post('/', async (req, res) => {
   try {
-    const { firstName, lastName, email, availableDays } = req.body;
+    const { firstName, lastName, email, interestedPrograms } = req.body;
 
     // Validation
     if (!firstName || !firstName.trim()) {
@@ -53,59 +53,45 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Please provide a valid email address' });
     }
 
-    if (!availableDays || availableDays.length === 0) {
-      return res.status(400).json({ message: 'Please select at least one available day' });
+    if (!interestedPrograms || interestedPrograms.length === 0) {
+      return res.status(400).json({ message: 'Please select at least one program you are interested in' });
     }
 
     // Check if volunteer with this email already exists
     const existingVolunteer = await Volunteer.findOne({ email: email.toLowerCase() });
 
-    let volunteer;
-    let isNew = false;
-
     if (existingVolunteer) {
-      // Update existing volunteer
-      volunteer = await Volunteer.findOneAndUpdate(
-        { email: email.toLowerCase() },
-        {
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          availableDays: availableDays
-        },
-        { new: true, runValidators: true }
-      );
-    } else {
-      // Create new volunteer
-      volunteer = await Volunteer.create({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: email.toLowerCase(),
-        availableDays: availableDays
+      // Block submission - user already signed up
+      return res.status(400).json({ 
+        message: "Sorry, it looks like you've already signed up to volunteer, which is great! Please reach out to Sarah or Kendra at ofallondems@gmail.com if you'd like to update your volunteering interests! Thank you again!" 
       });
-      isNew = true;
     }
+
+    // Create new volunteer
+    const volunteer = await Volunteer.create({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.toLowerCase(),
+      interestedPrograms: interestedPrograms
+    });
 
     // Send notification email to Community Outreach team (or test email in dev)
     try {
       // Determine recipient based on environment
       const recipientEmail = process.env.NODE_ENV === 'development'
-        ? process.env.TEST_EMAIL_RECIPIENT
+        ? process.env.VOLUNTEER_TEST_EMAIL
         : 'ofallondems@gmail.com';
 
-      const emailSubject = isNew 
-        ? '🙋 New Volunteer Sign-Up!' 
-        : '🔄 Volunteer Information Updated';
-
       const devNote = process.env.NODE_ENV === 'development'
-        ? '<p style="background-color: #fef3c7; padding: 10px; border-left: 4px solid #f59e0b;"><strong>⚠️ DEV MODE:</strong> This is a test email. In production, this would be sent to ofallondems@gmail.com</p>'
+        ? '<p style="background-color: #fef3c7; padding: 10px; border-left: 4px solid #f59e0b;"><strong>⚠️ DEV MODE:</strong> This is a test notification email. In production, this would be sent to ofallondems@gmail.com</p>'
         : '';
 
-      const emailBody = `
+      const notificationBody = `
         ${devNote}
-        <h2>${isNew ? 'New Volunteer Sign-Up' : 'Volunteer Information Updated'}</h2>
+        <h2>🙋 New Volunteer Sign-Up!</h2>
         <p><strong>Name:</strong> ${firstName} ${lastName}</p>
         <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Available Days:</strong> ${availableDays.join(', ')}</p>
+        <p><strong>Interested Programs:</strong> ${interestedPrograms.join(', ')}</p>
         <p><strong>Signed Up:</strong> ${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' })}</p>
         <hr>
         <p><em>This is an automated notification from the OADC website volunteer form.</em></p>
@@ -114,8 +100,8 @@ router.post('/', async (req, res) => {
       await transporter.sendMail({
         from: `"OADC Website" <${process.env.EMAIL_USER}>`,
         to: recipientEmail,
-        subject: emailSubject,
-        html: emailBody,
+        subject: '🙋 New Volunteer Sign-Up!',
+        html: notificationBody,
         replyTo: email,
       });
 
@@ -125,13 +111,51 @@ router.post('/', async (req, res) => {
       // Don't fail the request if email fails
     }
 
-    const message = isNew
-      ? 'Thank you for signing up! Our Community Outreach team will be in touch soon.'
-      : 'Your volunteer information has been updated successfully!';
+    // Send confirmation email to volunteer
+    try {
+      // Determine recipient based on environment
+      const confirmationRecipient = process.env.NODE_ENV === 'development'
+        ? process.env.VOLUNTEER_TEST_EMAIL
+        : email;
 
-    return res.status(isNew ? 201 : 200).json({
+      const devNote = process.env.NODE_ENV === 'development'
+        ? '<p style="background-color: #fef3c7; padding: 10px; border-left: 4px solid #f59e0b;"><strong>⚠️ DEV MODE:</strong> This is a test confirmation email. In production, this would be sent to the volunteer\'s email address.</p>'
+        : '';
+
+      const programsList = interestedPrograms.map(program => `<li>${program}</li>`).join('');
+
+      const confirmationBody = `
+        ${devNote}
+        <h2>Thank You for Signing Up to Volunteer! 🙋</h2>
+        <p>Hi ${firstName},</p>
+        <p>Thank you so much for your interest in getting involved in volunteering to help support our community!</p>
+        <p><strong>As a reminder, here are the programs you mentioned an interest in:</strong></p>
+        <ul>
+          ${programsList}
+        </ul>
+        <p>Sarah and Kendra have received your volunteer submission, and one of them will be reaching out to you at this email address soon!</p>
+        <p>Thank you again for signing up to volunteer!</p>
+        <hr>
+        <p><em>If you need to update your volunteer interests, please reach out to Sarah or Kendra at <a href="mailto:ofallondems@gmail.com">ofallondems@gmail.com</a>.</em></p>
+      `;
+
+      await transporter.sendMail({
+        from: `"O'Fallon Area Democratic Club" <${process.env.EMAIL_USER}>`,
+        to: confirmationRecipient,
+        subject: 'Thank You for Volunteering! 🙋',
+        html: confirmationBody,
+        replyTo: 'ofallondems@gmail.com',
+      });
+
+      console.log(`Volunteer confirmation email sent to ${confirmationRecipient}`);
+    } catch (emailError) {
+      console.error('Error sending confirmation email:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    return res.status(201).json({
       volunteer: volunteer,
-      message: message
+      message: 'Thank you for signing up! Our Community Outreach team will be in touch soon.'
     });
 
   } catch (error) {
@@ -145,7 +169,7 @@ router.post('/', async (req, res) => {
 // @access Private
 router.put('/:id', protect, async (req, res) => {
   try {
-    const { firstName, lastName, email, availableDays } = req.body;
+    const { firstName, lastName, email, interestedPrograms } = req.body;
 
     // Validation
     if (!firstName || !firstName.trim()) {
@@ -164,8 +188,8 @@ router.put('/:id', protect, async (req, res) => {
       return res.status(400).json({ message: 'Please provide a valid email address' });
     }
 
-    if (!availableDays || availableDays.length === 0) {
-      return res.status(400).json({ message: 'Please select at least one available day' });
+    if (!interestedPrograms || interestedPrograms.length === 0) {
+      return res.status(400).json({ message: 'Please select at least one program you are interested in' });
     }
 
     const volunteer = await Volunteer.findById(req.params.id);
@@ -178,7 +202,7 @@ router.put('/:id', protect, async (req, res) => {
     volunteer.firstName = firstName.trim();
     volunteer.lastName = lastName.trim();
     volunteer.email = email.toLowerCase();
-    volunteer.availableDays = availableDays;
+    volunteer.interestedPrograms = interestedPrograms;
 
     const updatedVolunteer = await volunteer.save();
     res.json(updatedVolunteer);
