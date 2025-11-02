@@ -42,20 +42,43 @@ async function archiveAndResetPoll() {
   try {
     console.log('🗳️  Starting weekly poll reset and archival...');
 
-    const previousWeekId = getPreviousWeekIdentifier();
+    const now = new Date();
     const currentWeekId = getCurrentWeekIdentifier();
+    
+    // Important: When this runs on Monday at midnight (start of new week),
+    // we want to archive the week that JUST ENDED (which is still technically "last week")
+    // We'll find ALL votes that are NOT from the current week
+    const allVotes = await PollVote.find({});
+    
+    console.log(`📊 Found ${allVotes.length} total votes in database`);
+    
+    // Group votes by week identifier
+    const votesByWeek = new Map();
+    allVotes.forEach(vote => {
+      if (vote.weekIdentifier !== currentWeekId) {
+        if (!votesByWeek.has(vote.weekIdentifier)) {
+          votesByWeek.set(vote.weekIdentifier, []);
+        }
+        votesByWeek.get(vote.weekIdentifier).push(vote);
+      }
+    });
 
-    // Get all votes from previous week
-    const previousVotes = await PollVote.find({ weekIdentifier: previousWeekId });
+    console.log(`📅 Current week: ${currentWeekId}`);
+    console.log(`📦 Found ${votesByWeek.size} week(s) to archive`);
 
-    if (previousVotes.length > 0) {
+    // Archive each week's votes
+    for (const [weekId, votes] of votesByWeek) {
+      if (votes.length === 0) continue;
+
+      console.log(`\n📊 Archiving week ${weekId} (${votes.length} votes)...`);
+
       // Calculate issue counts
       const issueCounts = new Map();
       VALID_ISSUES.forEach(issue => {
         issueCounts.set(issue, 0);
       });
 
-      previousVotes.forEach(vote => {
+      votes.forEach(vote => {
         vote.selectedIssues.forEach(issue => {
           if (issueCounts.has(issue)) {
             issueCounts.set(issue, issueCounts.get(issue) + 1);
@@ -63,37 +86,46 @@ async function archiveAndResetPoll() {
         });
       });
 
-      // Get the Sunday that ended the previous week
-      const now = new Date();
-      const dayOfWeek = now.getDay();
-      const daysToSubtract = dayOfWeek === 0 ? 0 : dayOfWeek; // If today is Monday (1), go back 1 day to Sunday
-      const weekEnding = new Date(now.getTime() - daysToSubtract * 24 * 60 * 60 * 1000);
+      // Calculate the Sunday that ended this week
+      // Extract week number from identifier (e.g., "2025-W44" -> 44)
+      const weekNumber = parseInt(weekId.split('-W')[1]);
+      const year = parseInt(weekId.split('-W')[0]);
+      
+      // Calculate the date of Sunday for that week
+      const jan1 = new Date(year, 0, 1);
+      const daysToAdd = (weekNumber - 1) * 7 + (7 - jan1.getDay());
+      const weekEnding = new Date(year, 0, daysToAdd);
       weekEnding.setHours(23, 59, 59, 999);
 
-      // Save to analytics
-      const analytics = await PollAnalytics.findOneAndUpdate(
-        { weekIdentifier: previousWeekId },
-        {
-          weekIdentifier: previousWeekId,
+      // Check if analytics already exist for this week
+      const existingAnalytics = await PollAnalytics.findOne({ weekIdentifier: weekId });
+      
+      if (existingAnalytics) {
+        console.log(`⚠️  Analytics already exist for ${weekId}, updating...`);
+        existingAnalytics.totalVotes = votes.length;
+        existingAnalytics.issueCounts = issueCounts;
+        existingAnalytics.archivedAt = new Date();
+        await existingAnalytics.save();
+      } else {
+        // Save to analytics
+        await PollAnalytics.create({
+          weekIdentifier: weekId,
           weekEnding: weekEnding,
-          totalVotes: previousVotes.length,
+          totalVotes: votes.length,
           issueCounts: issueCounts,
           archivedAt: new Date()
-        },
-        { upsert: true, new: true }
-      );
+        });
+      }
 
-      console.log(`✅ Archived ${previousVotes.length} votes for week ${previousWeekId}`);
+      console.log(`✅ Archived ${votes.length} votes for week ${weekId}`);
 
-      // Delete old votes (keep last 2 weeks for safety)
-      const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-      const deleteResult = await PollVote.deleteMany({
-        votedAt: { $lt: twoWeeksAgo }
-      });
+      // Delete the archived votes for this specific week
+      const deleteResult = await PollVote.deleteMany({ weekIdentifier: weekId });
+      console.log(`🗑️  Deleted ${deleteResult.deletedCount} vote records for week ${weekId}`);
+    }
 
-      console.log(`🗑️  Deleted ${deleteResult.deletedCount} old vote records`);
-    } else {
-      console.log(`ℹ️  No votes to archive for week ${previousWeekId}`);
+    if (votesByWeek.size === 0) {
+      console.log(`ℹ️  No old weeks to archive. Current week ${currentWeekId} is still active.`);
     }
 
     // Broadcast reset notification if available
@@ -107,26 +139,27 @@ async function archiveAndResetPoll() {
       });
     }
 
-    console.log('✨ Weekly poll reset completed successfully!');
+    console.log('\n✨ Weekly poll reset completed successfully!');
+    console.log(`📅 New active week: ${currentWeekId}\n`);
 
   } catch (error) {
     console.error('❌ Error during poll reset and archival:', error);
   }
 }
 
-// Schedule the job to run every Monday at 00:00 (midnight)
-// Cron format: second minute hour day month weekday
-// '0 0 * * 1' = At 00:00 on Monday
+// Schedule the job to run every Sunday at 23:59 (just before midnight)
+// Cron format: minute hour day month weekday
+// '59 23 * * 0' = At 23:59 on Sunday (day 0)
 function startPollScheduler() {
-  // Run every Monday at midnight
-  cron.schedule('0 0 * * 1', () => {
-    console.log('⏰ Cron job triggered: Monday midnight poll reset');
+  // Run every Sunday at 11:59 PM to archive the week and reset for Monday
+  cron.schedule('59 23 * * 0', () => {
+    console.log('⏰ Cron job triggered: Sunday 11:59 PM poll reset');
     archiveAndResetPoll();
   }, {
     timezone: 'America/Chicago' // Adjust to your timezone
   });
 
-  console.log('📅 Poll scheduler initialized - Weekly reset every Monday at 00:00 CST');
+  console.log('📅 Poll scheduler initialized - Weekly reset every Sunday at 23:59 CST');
 }
 
 module.exports = { startPollScheduler, archiveAndResetPoll };
