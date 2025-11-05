@@ -14,9 +14,34 @@ const eventSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  eventDescription: {
+  startTime: {
     type: String,
     trim: true
+  },
+  endTime: {
+    type: String,
+    trim: true
+  },
+  isAllDay: {
+    type: Boolean,
+    default: false
+  },
+  eventDescription: {
+    type: String,
+    trim: true,
+    maxlength: [300, 'Description cannot exceed 300 characters']
+  },
+  eventLocation: {
+    type: String,
+    trim: true
+  },
+  eventCoordinates: {
+    lat: {
+      type: Number
+    },
+    lng: {
+      type: Number
+    }
   },
   eventLink: {
     type: String,

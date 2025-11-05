@@ -16,7 +16,20 @@ router.get('/', async (req, res) => {
 // Create an event (Private)
 router.post('/', protect, async (req, res) => {
   try {
-    const { eventName, eventDate, eventTime, eventDescription } = req.body;
+    const { 
+      eventName, 
+      eventDate, 
+      eventTime, 
+      startTime,
+      endTime,
+      isAllDay,
+      eventDescription,
+      eventLocation,
+      eventCoordinates,
+      eventLink,
+      eventLinkText,
+      isBannerEvent
+    } = req.body;
 
     if (!eventName || !eventDate) {
       return res.status(400).json({ message: 'Event name and date are required' });
@@ -26,7 +39,15 @@ router.post('/', protect, async (req, res) => {
       eventName,
       eventDate,
       eventTime,
+      startTime,
+      endTime,
+      isAllDay,
       eventDescription,
+      eventLocation,
+      eventCoordinates,
+      eventLink,
+      eventLinkText,
+      isBannerEvent,
     });
 
     const createdEvent = await event.save();
