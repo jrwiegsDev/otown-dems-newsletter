@@ -3,6 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const Announcement = require('../models/announcementModel');
+const ArchivedAnnouncement = require('../models/archivedAnnouncementModel');
 
 // @route   GET /api/announcements
 // @desc    Get all announcements (sorted by most recent first)
@@ -11,6 +12,18 @@ router.get('/', async (req, res) => {
   try {
     const announcements = await Announcement.find().sort({ createdAt: -1 });
     res.json(announcements);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   GET /api/announcements/archived
+// @desc    Get all archived announcements
+// @access  Private (should be protected by auth middleware)
+router.get('/archived', async (req, res) => {
+  try {
+    const archivedAnnouncements = await ArchivedAnnouncement.find().sort({ archivedAt: -1 });
+    res.json(archivedAnnouncements);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -63,7 +76,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // @route   DELETE /api/announcements/:id
-// @desc    Delete an announcement
+// @desc    Delete an announcement (archives it first)
 // @access  Private (should be protected by auth middleware)
 router.delete('/:id', async (req, res) => {
   try {
@@ -73,8 +86,23 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Announcement not found' });
     }
 
+    // Archive the announcement before deletion
+    const archivedAnnouncement = new ArchivedAnnouncement({
+      title: announcement.title,
+      content: announcement.content,
+      originalCreatedAt: announcement.createdAt,
+      originalId: announcement._id
+    });
+
+    await archivedAnnouncement.save();
+    
+    // Now delete the original announcement
     await announcement.deleteOne();
-    res.json({ message: 'Announcement deleted successfully' });
+    
+    res.json({ 
+      message: 'Announcement archived and deleted successfully',
+      archivedId: archivedAnnouncement._id
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

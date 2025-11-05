@@ -93,6 +93,29 @@
     background-color: var(--chakra-colors-yellow-600);
 }
 
+/* --- "X Events" More Link Button Styling --- */
+.fc-daygrid-more-link {
+    background-color: var(--chakra-colors-purple-500) !important;
+    color: white !important;
+    border: 2px solid var(--chakra-colors-purple-600) !important;
+    border-radius: 6px !important;
+    padding: 4px 12px !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    text-align: center !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    display: inline-block !important;
+    margin: 2px !important;
+    text-decoration: none !important;
+}
+
+.fc-daygrid-more-link:hover {
+    background-color: var(--chakra-colors-purple-600) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 8px rgba(128, 90, 213, 0.4) !important;
+}
+
 /* --- Mobile Responsiveness --- */
 @media (max-width: 768px) {
     .fc .fc-toolbar {
