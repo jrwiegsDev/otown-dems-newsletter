@@ -33,9 +33,13 @@ import {
   Input,
 } from '@chakra-ui/react';
 import { DeleteIcon, EditIcon } from '@chakra-ui/icons';
-import EventCalendar from '../components/EventCalendar';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import '../components/FullCalendar.css';
 import AddEventForm from '../components/AddEventForm';
 import ManageAnnouncements from '../components/ManageAnnouncements';
+import LocationAutocomplete from '../components/LocationAutocomplete';
 
 const CalendarDashboard = ({
   events,
@@ -53,20 +57,44 @@ const CalendarDashboard = ({
   deleteAnnouncement,
 }) => {
   const cancelRef = useRef();
-  const { isOpen: isEventDetailModalOpen, onOpen: onEventDetailModalOpen, onClose: onEventDetailModalClose } = useDisclosure();
-  const [selectedDateEvents, setSelectedDateEvents] = useState([]);
   const [isEventDeleteAlertOpen, setIsEventDeleteAlertOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState(null);
   const { isOpen: isEventEditModalOpen, onOpen: onEventEditModalOpen, onClose: onEventEditModalClose } = useDisclosure();
   const [eventToEdit, setEventToEdit] = useState(null);
-  const [editEventFormData, setEditEventFormData] = useState({ eventName: '', eventDate: '', eventTime: '', eventDescription: '', eventLink: '', eventLinkText: '' });
+  const [editEventFormData, setEditEventFormData] = useState({
+    eventName: '',
+    eventDate: '',
+    isAllDay: false,
+    startHour: '9',
+    startMinute: '00',
+    startPeriod: 'AM',
+    endHour: '10',
+    endMinute: '00',
+    endPeriod: 'AM',
+    eventLocation: '',
+    eventCoordinates: { lat: null, lng: null },
+    eventDescription: '',
+    eventLink: '',
+    eventLinkText: ''
+  });
 
-  const handleDateClick = (date) => {
-    const eventsOnDate = getEventsForDate(date);
-    if (eventsOnDate.length > 0) {
-      setSelectedDateEvents(eventsOnDate);
-      onEventDetailModalOpen();
+  // Generate options for dropdowns
+  const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
+  const minutes = ['00', '15', '30', '45'];
+  const periods = ['AM', 'PM'];
+
+  // Helper function to format time display (handles both old and new formats)
+  const formatEventTime = (event) => {
+    if (event.isAllDay) {
+      return 'All Day';
     }
+    if (event.startTime && event.endTime) {
+      return `${event.startTime} - ${event.endTime}`;
+    }
+    if (event.eventTime) {
+      return event.eventTime; // Legacy format
+    }
+    return 'Time TBD';
   };
 
   const handleBannerToggle = async (event) => {
@@ -89,10 +117,43 @@ const CalendarDashboard = ({
 
   const openEventEditModal = (event) => {
     setEventToEdit(event);
+    
+    // Parse time fields - handle both old and new formats
+    let startHour = '9', startMinute = '00', startPeriod = 'AM';
+    let endHour = '10', endMinute = '00', endPeriod = 'AM';
+    
+    if (event.startTime) {
+      // New format: "9:00 AM"
+      const match = event.startTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (match) {
+        startHour = match[1];
+        startMinute = match[2];
+        startPeriod = match[3].toUpperCase();
+      }
+    }
+    
+    if (event.endTime) {
+      // New format: "10:00 AM"
+      const match = event.endTime.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (match) {
+        endHour = match[1];
+        endMinute = match[2];
+        endPeriod = match[3].toUpperCase();
+      }
+    }
+    
     setEditEventFormData({
       eventName: event.eventName,
       eventDate: new Date(event.eventDate).toISOString().split('T')[0],
-      eventTime: event.eventTime || '',
+      isAllDay: event.isAllDay || false,
+      startHour,
+      startMinute,
+      startPeriod,
+      endHour,
+      endMinute,
+      endPeriod,
+      eventLocation: event.eventLocation || '',
+      eventCoordinates: event.eventCoordinates || { lat: null, lng: null },
       eventDescription: event.eventDescription || '',
       eventLink: event.eventLink || '',
       eventLinkText: event.eventLinkText || 'Learn More',
@@ -100,12 +161,43 @@ const CalendarDashboard = ({
     onEventEditModalOpen();
   };
 
+  const handleLocationChange = (locationData) => {
+    setEditEventFormData({
+      ...editEventFormData,
+      eventLocation: locationData.address,
+      eventCoordinates: locationData.lat && locationData.lng 
+        ? { lat: locationData.lat, lng: locationData.lng }
+        : { lat: null, lng: null }
+    });
+  };
+
   const handleEventEditFormChange = (e) => {
-    setEditEventFormData({ ...editEventFormData, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    setEditEventFormData({ 
+      ...editEventFormData, 
+      [name]: type === 'checkbox' ? checked : value 
+    });
   };
 
   const handleEventEditSubmit = async () => {
-    const result = await updateEvent(eventToEdit._id, editEventFormData);
+    const updatedData = {
+      eventName: editEventFormData.eventName,
+      eventDate: editEventFormData.eventDate,
+      eventLocation: editEventFormData.eventLocation,
+      eventCoordinates: editEventFormData.eventCoordinates,
+      eventDescription: editEventFormData.eventDescription,
+      eventLink: editEventFormData.eventLink,
+      eventLinkText: editEventFormData.eventLinkText,
+      isAllDay: editEventFormData.isAllDay,
+    };
+
+    // Only add time fields if not all-day event
+    if (!editEventFormData.isAllDay) {
+      updatedData.startTime = `${editEventFormData.startHour}:${editEventFormData.startMinute} ${editEventFormData.startPeriod}`;
+      updatedData.endTime = `${editEventFormData.endHour}:${editEventFormData.endMinute} ${editEventFormData.endPeriod}`;
+    }
+
+    const result = await updateEvent(eventToEdit._id, updatedData);
     if (result) {
       onEventEditModalClose();
     }
@@ -122,19 +214,53 @@ const CalendarDashboard = ({
       >
         {/* TOP LEFT: Calendar */}
         <GridItem area="calendar" display="flex" flexDirection="column">
-          <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" display="flex" flexDirection="column" minH="500px">
+          <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" display="flex" flexDirection="column" h="700px">
             <Heading fontSize="xl" flexShrink={0} mb={4}>Calendar View</Heading>
-            <Box flexShrink={0}>
-              <EventCalendar events={events} onDateClick={handleDateClick} />
+            <Box flexGrow={1} overflow="hidden">
+              <FullCalendar
+                plugins={[dayGridPlugin, interactionPlugin]}
+                initialView="dayGridMonth"
+                events={events.map(event => ({
+                  id: event._id,
+                  title: event.eventName,
+                  date: event.eventDate.slice(0, 10),
+                  backgroundColor: event.isBannerEvent ? 'var(--chakra-colors-yellow-500)' : 'var(--chakra-colors-blue-500)',
+                  borderColor: event.isBannerEvent ? 'var(--chakra-colors-yellow-600)' : 'var(--chakra-colors-blue-600)',
+                  classNames: event.isBannerEvent ? ['banner-event'] : [],
+                  extendedProps: {
+                    description: event.eventDescription,
+                    time: event.eventTime,
+                    startTime: event.startTime,
+                    endTime: event.endTime,
+                    isAllDay: event.isAllDay,
+                    location: event.eventLocation,
+                    coordinates: event.eventCoordinates,
+                    link: event.eventLink,
+                    linkText: event.eventLinkText,
+                    isBannerEvent: event.isBannerEvent,
+                    fullEvent: event
+                  }
+                }))}
+                headerToolbar={{
+                  left: 'prev,next today',
+                  center: 'title',
+                  right: 'dayGridMonth,dayGridWeek'
+                }}
+                eventClick={(clickInfo) => {
+                  const event = clickInfo.event.extendedProps.fullEvent;
+                  openEventEditModal(event);
+                }}
+                height="100%"
+              />
             </Box>
           </Box>
         </GridItem>
 
         {/* TOP RIGHT: Event Management (Create Event) */}
         <GridItem area="management" display="flex" flexDirection="column">
-          <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" display="flex" flexDirection="column" minH="500px">
+          <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" display="flex" flexDirection="column" h="700px">
             <Heading fontSize="xl" flexShrink={0} mb={4}>Event Management</Heading>
-            <Box flex="1" overflowY="auto">
+            <Box flex="1" overflowY="auto" pr={2}>
               <AddEventForm onEventAdded={fetchEvents} />
             </Box>
           </Box>
@@ -162,7 +288,7 @@ const CalendarDashboard = ({
                       <Box flex="1">
                         <Heading fontSize="md">{event.eventName}</Heading>
                         <Text fontSize="sm" color="gray.500">
-                          {new Date(event.eventDate).toLocaleDateString('en-US', { timeZone: 'UTC' })} at {event.eventTime}
+                          {new Date(event.eventDate).toLocaleDateString('en-US', { timeZone: 'UTC' })} at {formatEventTime(event)}
                         </Text>
                         <Text mt={2}>{event.eventDescription}</Text>
                       </Box>
@@ -225,44 +351,79 @@ const CalendarDashboard = ({
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4}>
-              <FormControl><FormLabel>Event Name</FormLabel><Input name="eventName" value={editEventFormData.eventName} onChange={handleEventEditFormChange} /></FormControl>
-              <FormControl><FormLabel>Event Date</FormLabel><Input name="eventDate" type="date" value={editEventFormData.eventDate} onChange={handleEventEditFormChange} /></FormControl>
-              <FormControl><FormLabel>Event Time</FormLabel><Input name="eventTime" value={editEventFormData.eventTime} onChange={handleEventEditFormChange} /></FormControl>
-              <FormControl><FormLabel>Description / Location</FormLabel><Textarea name="eventDescription" value={editEventFormData.eventDescription} onChange={handleEventEditFormChange} placeholder="Press Enter for line breaks" /></FormControl>
-              <FormControl><FormLabel>Event Link (optional)</FormLabel><Input name="eventLink" type="url" value={editEventFormData.eventLink} onChange={handleEventEditFormChange} placeholder="https://eventbrite.com/..." /></FormControl>
-              <FormControl><FormLabel>Link Button Text (optional)</FormLabel><Input name="eventLinkText" value={editEventFormData.eventLinkText} onChange={handleEventEditFormChange} placeholder="Buy Tickets" /></FormControl>
+              <FormControl>
+                <FormLabel>Event Name</FormLabel>
+                <Input name="eventName" value={editEventFormData.eventName} onChange={handleEventEditFormChange} />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Event Date</FormLabel>
+                <Input name="eventDate" type="date" value={editEventFormData.eventDate} onChange={handleEventEditFormChange} />
+              </FormControl>
+              <FormControl>
+                <Checkbox 
+                  name="isAllDay"
+                  isChecked={editEventFormData.isAllDay} 
+                  onChange={handleEventEditFormChange}
+                >
+                  All-Day Event
+                </Checkbox>
+              </FormControl>
+              {!editEventFormData.isAllDay && (
+                <>
+                  <FormControl>
+                    <FormLabel>Start Time</FormLabel>
+                    <Flex gap={2}>
+                      <Input as="select" name="startHour" value={editEventFormData.startHour} onChange={handleEventEditFormChange}>
+                        {hours.map(hour => <option key={hour} value={hour}>{hour}</option>)}
+                      </Input>
+                      <Input as="select" name="startMinute" value={editEventFormData.startMinute} onChange={handleEventEditFormChange}>
+                        {minutes.map(min => <option key={min} value={min}>{min}</option>)}
+                      </Input>
+                      <Input as="select" name="startPeriod" value={editEventFormData.startPeriod} onChange={handleEventEditFormChange}>
+                        {periods.map(period => <option key={period} value={period}>{period}</option>)}
+                      </Input>
+                    </Flex>
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel>End Time</FormLabel>
+                    <Flex gap={2}>
+                      <Input as="select" name="endHour" value={editEventFormData.endHour} onChange={handleEventEditFormChange}>
+                        {hours.map(hour => <option key={hour} value={hour}>{hour}</option>)}
+                      </Input>
+                      <Input as="select" name="endMinute" value={editEventFormData.endMinute} onChange={handleEventEditFormChange}>
+                        {minutes.map(min => <option key={min} value={min}>{min}</option>)}
+                      </Input>
+                      <Input as="select" name="endPeriod" value={editEventFormData.endPeriod} onChange={handleEventEditFormChange}>
+                        {periods.map(period => <option key={period} value={period}>{period}</option>)}
+                      </Input>
+                    </Flex>
+                  </FormControl>
+                </>
+              )}
+              <FormControl>
+                <FormLabel>Location</FormLabel>
+                <LocationAutocomplete
+                  value={editEventFormData.eventLocation}
+                  onChange={handleLocationChange}
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Event Description (max 300 characters)</FormLabel>
+                <Textarea name="eventDescription" value={editEventFormData.eventDescription} onChange={handleEventEditFormChange} placeholder="Brief description of the event" maxLength={300} />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Event Link (optional)</FormLabel>
+                <Input name="eventLink" type="url" value={editEventFormData.eventLink} onChange={handleEventEditFormChange} placeholder="https://eventbrite.com/..." />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Link Button Text (optional)</FormLabel>
+                <Input name="eventLinkText" value={editEventFormData.eventLinkText} onChange={handleEventEditFormChange} placeholder="Buy Tickets" />
+              </FormControl>
             </VStack>
           </ModalBody>
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={onEventEditModalClose}>Cancel</Button>
             <Button colorScheme="blue" onClick={handleEventEditSubmit}>Save Changes</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* Event Detail Modal (for calendar date clicks) */}
-      <Modal isOpen={isEventDetailModalOpen} onClose={onEventDetailModalClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>
-            Events for {selectedDateEvents.length > 0 && new Date(selectedDateEvents[0].eventDate).toLocaleDateString('en-US', { timeZone: 'UTC' })}
-          </ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <VStack spacing={4} align="stretch">
-              {selectedDateEvents.map(event => (
-                <Box key={event._id} p={4} borderWidth="1px" borderRadius="md">
-                  <Heading fontSize="md">{event.eventName}</Heading>
-                  <Text fontSize="sm" color="gray.500">{event.eventTime}</Text>
-                  <Text mt={2}>{event.eventDescription}</Text>
-                </Box>
-              ))}
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <Button colorScheme="blue" onClick={onEventDetailModalClose}>
-              Close
-            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

@@ -7,30 +7,69 @@ import {
   Input,
   Textarea,
   VStack,
+  HStack,
+  Select,
+  Checkbox,
   useToast,
 } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext';
 import eventService from '../services/eventService';
+import LocationAutocomplete from './LocationAutocomplete';
 
 const AddEventForm = ({ onEventAdded }) => {
   const { user } = useAuth();
   const toast = useToast();
   const [eventName, setEventName] = useState('');
   const [eventDate, setEventDate] = useState('');
-  const [eventTime, setEventTime] = useState('');
+  const [isAllDay, setIsAllDay] = useState(false);
+  const [startHour, setStartHour] = useState('9');
+  const [startMinute, setStartMinute] = useState('00');
+  const [startPeriod, setStartPeriod] = useState('AM');
+  const [endHour, setEndHour] = useState('10');
+  const [endMinute, setEndMinute] = useState('00');
+  const [endPeriod, setEndPeriod] = useState('AM');
+  const [eventLocation, setEventLocation] = useState('');
+  const [eventCoordinates, setEventCoordinates] = useState({ lat: null, lng: null });
   const [eventDescription, setEventDescription] = useState('');
   const [eventLink, setEventLink] = useState('');
   const [eventLinkText, setEventLinkText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Generate options for dropdowns
+  const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
+  const minutes = ['00', '15', '30', '45'];
+  const periods = ['AM', 'PM'];
+
+  const handleLocationChange = (locationData) => {
+    setEventLocation(locationData.address);
+    if (locationData.lat && locationData.lng) {
+      setEventCoordinates({ lat: locationData.lat, lng: locationData.lng });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await eventService.createEvent(
-        { eventName, eventDate, eventTime, eventDescription, eventLink, eventLinkText },
-        user.token
-      );
+      const eventData = {
+        eventName,
+        eventDate,
+        eventLocation,
+        eventCoordinates,
+        eventDescription,
+        eventLink,
+        eventLinkText,
+        isAllDay,
+      };
+
+      // Only add time fields if not all-day event
+      if (!isAllDay) {
+        eventData.startTime = `${startHour}:${startMinute} ${startPeriod}`;
+        eventData.endTime = `${endHour}:${endMinute} ${endPeriod}`;
+      }
+
+      await eventService.createEvent(eventData, user.token);
+      
       toast({
         title: 'Success!',
         description: 'Event has been created.',
@@ -38,10 +77,19 @@ const AddEventForm = ({ onEventAdded }) => {
         duration: 3000,
         isClosable: true,
       });
+      
       // Clear the form and notify the parent to refetch
       setEventName('');
       setEventDate('');
-      setEventTime('');
+      setIsAllDay(false);
+      setStartHour('9');
+      setStartMinute('00');
+      setStartPeriod('AM');
+      setEndHour('10');
+      setEndMinute('00');
+      setEndPeriod('AM');
+      setEventLocation('');
+      setEventCoordinates({ lat: null, lng: null });
       setEventDescription('');
       setEventLink('');
       setEventLinkText('');
@@ -77,20 +125,78 @@ const AddEventForm = ({ onEventAdded }) => {
             onChange={(e) => setEventDate(e.target.value)}
           />
         </FormControl>
+        
         <FormControl>
-          <FormLabel>Event Time</FormLabel>
-          <Input
-            value={eventTime}
-            onChange={(e) => setEventTime(e.target.value)}
-            placeholder="e.g., 9:00 AM - 10:30 AM"
+          <Checkbox 
+            isChecked={isAllDay} 
+            onChange={(e) => setIsAllDay(e.target.checked)}
+          >
+            All-Day Event
+          </Checkbox>
+        </FormControl>
+
+        {!isAllDay && (
+          <>
+            <FormControl isRequired>
+              <FormLabel>Start Time</FormLabel>
+              <HStack>
+                <Select value={startHour} onChange={(e) => setStartHour(e.target.value)}>
+                  {hours.map(hour => (
+                    <option key={hour} value={hour}>{hour}</option>
+                  ))}
+                </Select>
+                <Select value={startMinute} onChange={(e) => setStartMinute(e.target.value)}>
+                  {minutes.map(min => (
+                    <option key={min} value={min}>{min}</option>
+                  ))}
+                </Select>
+                <Select value={startPeriod} onChange={(e) => setStartPeriod(e.target.value)}>
+                  {periods.map(period => (
+                    <option key={period} value={period}>{period}</option>
+                  ))}
+                </Select>
+              </HStack>
+            </FormControl>
+
+            <FormControl>
+              <FormLabel>End Time</FormLabel>
+              <HStack>
+                <Select value={endHour} onChange={(e) => setEndHour(e.target.value)}>
+                  {hours.map(hour => (
+                    <option key={hour} value={hour}>{hour}</option>
+                  ))}
+                </Select>
+                <Select value={endMinute} onChange={(e) => setEndMinute(e.target.value)}>
+                  {minutes.map(min => (
+                    <option key={min} value={min}>{min}</option>
+                  ))}
+                </Select>
+                <Select value={endPeriod} onChange={(e) => setEndPeriod(e.target.value)}>
+                  {periods.map(period => (
+                    <option key={period} value={period}>{period}</option>
+                  ))}
+                </Select>
+              </HStack>
+            </FormControl>
+          </>
+        )}
+
+        <FormControl isRequired>
+          <FormLabel>Location</FormLabel>
+          <LocationAutocomplete
+            value={eventLocation}
+            onChange={handleLocationChange}
+            isRequired={true}
           />
         </FormControl>
+
         <FormControl>
-          <FormLabel>Description / Location</FormLabel>
+          <FormLabel>Event Description (max 300 characters)</FormLabel>
           <Textarea
             value={eventDescription}
             onChange={(e) => setEventDescription(e.target.value)}
-            placeholder="Press Enter for line breaks. e.g., O'Fallon City Hall"
+            placeholder="Brief description of the event"
+            maxLength={300}
           />
         </FormControl>
         <FormControl>

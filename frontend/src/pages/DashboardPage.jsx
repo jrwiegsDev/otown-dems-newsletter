@@ -7,7 +7,6 @@ import DashboardLayout from '../components/dashboard/DashboardLayout';
 import NewsletterDashboard from './NewsletterDashboard';
 import CalendarDashboard from './CalendarDashboard';
 import AnalyticsDashboard from './AnalyticsDashboard';
-import 'react-calendar/dist/Calendar.css';
 
 const DashboardPage = () => {
   const { user } = useAuth();
