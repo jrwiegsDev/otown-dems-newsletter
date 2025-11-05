@@ -1,0 +1,140 @@
+/* frontend/src/components/FullCalendar.css */
+
+/* Make calendar fill its container width */
+.fc {
+    width: 100% !important;
+}
+
+/* --- General & Toolbar --- */
+.fc-toolbar {
+    background-color: transparent !important;
+    margin-bottom: 1rem;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.fc .fc-button {
+    background-color: var(--chakra-colors-gray-700);
+    color: var(--chakra-colors-gray-100);
+    border: 1px solid var(--chakra-colors-gray-600);
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+}
+
+.fc .fc-button:hover {
+    background-color: var(--chakra-colors-gray-600);
+}
+
+.fc .fc-button-primary:not(:disabled):active,
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+    background-color: var(--chakra-colors-blue-500);
+    border-color: var(--chakra-colors-blue-500);
+}
+
+.fc .fc-button-primary:disabled {
+    background-color: var(--chakra-colors-gray-700);
+    border-color: var(--chakra-colors-gray-600);
+    opacity: 0.4;
+}
+
+/* --- Calendar Grid --- */
+.fc .fc-daygrid-day {
+    border-color: var(--chakra-colors-gray-600);
+}
+
+/* Style the day-of-week header (Sun, Mon, etc.) */
+.fc .fc-col-header {
+    background-color: var(--chakra-colors-gray-800);
+}
+
+.fc .fc-day-today {
+    background-color: var(--chakra-colors-gray-700) !important;
+}
+
+.fc .fc-col-header-cell-cushion {
+    color: var(--chakra-colors-blue-300);
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.5rem;
+}
+
+.fc .fc-daygrid-day-number {
+    padding: 0.5rem;
+}
+
+/* --- Event Styling & Text Wrap --- */
+.fc-event {
+    background-color: var(--chakra-colors-blue-500);
+    border: 1px solid var(--chakra-colors-blue-600);
+    cursor: pointer;
+}
+
+.fc-event:hover {
+    background-color: var(--chakra-colors-blue-600);
+}
+
+.fc-event-title {
+    white-space: normal;
+    overflow-wrap: break-word;
+    padding: 2px 4px;
+    font-size: 0.875rem;
+}
+
+/* Banner events */
+.fc-event.banner-event {
+    background-color: var(--chakra-colors-yellow-500);
+    border-color: var(--chakra-colors-yellow-600);
+}
+
+.fc-event.banner-event:hover {
+    background-color: var(--chakra-colors-yellow-600);
+}
+
+/* --- Mobile Responsiveness --- */
+@media (max-width: 768px) {
+    .fc .fc-toolbar {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .fc .fc-toolbar-title {
+        font-size: 1.2rem;
+    }
+
+    .fc .fc-button {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.6rem;
+    }
+
+    .fc .fc-col-header-cell-cushion {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.25rem;
+    }
+
+    .fc .fc-daygrid-day-number {
+        font-size: 0.85rem;
+        padding: 0.25rem;
+    }
+
+    .fc-event-title {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .fc .fc-toolbar-title {
+        font-size: 1rem;
+    }
+
+    .fc .fc-button {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.5rem;
+    }
+
+    .fc .fc-col-header-cell-cushion {
+        font-size: 0.75rem;
+    }
+}
