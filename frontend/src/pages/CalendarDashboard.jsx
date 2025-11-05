@@ -60,7 +60,9 @@ const CalendarDashboard = ({
   const [isEventDeleteAlertOpen, setIsEventDeleteAlertOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState(null);
   const { isOpen: isEventEditModalOpen, onOpen: onEventEditModalOpen, onClose: onEventEditModalClose } = useDisclosure();
+  const { isOpen: isMultiEventModalOpen, onOpen: onMultiEventModalOpen, onClose: onMultiEventModalClose } = useDisclosure();
   const [eventToEdit, setEventToEdit] = useState(null);
+  const [selectedDateEvents, setSelectedDateEvents] = useState([]);
   const [editEventFormData, setEditEventFormData] = useState({
     eventName: '',
     eventDate: '',
@@ -250,6 +252,31 @@ const CalendarDashboard = ({
                   const event = clickInfo.event.extendedProps.fullEvent;
                   openEventEditModal(event);
                 }}
+                dayMaxEventRows={true}
+                dayMaxEvents={(arg) => {
+                  // Count events for this day
+                  const dateStr = arg.date.toISOString().split('T')[0];
+                  const eventsOnThisDay = events.filter(event => 
+                    event.eventDate.slice(0, 10) === dateStr
+                  ).length;
+                  // If only 1 event, show it; if 2+, show 0 (only the "X Events" link)
+                  return eventsOnThisDay === 1 ? true : 0;
+                }}
+                moreLinkClick={(info) => {
+                  // Get all events from the segments that were passed
+                  const eventsOnDate = info.allSegs.map(seg => seg.event.extendedProps.fullEvent);
+                  setSelectedDateEvents(eventsOnDate);
+                  onMultiEventModalOpen();
+                  info.jsEvent.preventDefault();
+                  return 'none'; // Prevents the default popover
+                }}
+                moreLinkContent={(args) => {
+                  // info.allSegs contains ALL events for that day (both shown and hidden)
+                  // We want to show the total count from allSegs, not args.num
+                  const totalEvents = args.allSegs ? args.allSegs.length : args.num;
+                  return `${totalEvents} Event${totalEvents !== 1 ? 's' : ''}`;
+                }}
+                eventDisplay="block"
                 height="100%"
               />
             </Box>
@@ -342,6 +369,64 @@ const CalendarDashboard = ({
           </AlertDialogContent>
         </AlertDialogOverlay>
       </AlertDialog>
+
+      {/* Multi-Event Selection Modal */}
+      <Modal isOpen={isMultiEventModalOpen} onClose={onMultiEventModalClose} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>
+            Events on {selectedDateEvents.length > 0 && new Date(selectedDateEvents[0].eventDate).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <VStack spacing={3} align="stretch">
+              {selectedDateEvents.map((event) => (
+                <Box
+                  key={event._id}
+                  p={4}
+                  borderWidth="2px"
+                  borderRadius="md"
+                  borderColor={event.isBannerEvent ? 'yellow.400' : 'blue.400'}
+                  cursor="pointer"
+                  _hover={{ bg: 'gray.50', transform: 'translateY(-2px)', shadow: 'md' }}
+                  transition="all 0.2s"
+                  onClick={() => {
+                    onMultiEventModalClose();
+                    openEventEditModal(event);
+                  }}
+                >
+                  <Flex alignItems="center" justifyContent="space-between">
+                    <Box flex="1">
+                      <Heading fontSize="md" mb={1}>
+                        {event.eventName}
+                        {event.isBannerEvent && (
+                          <Text as="span" ml={2} fontSize="xs" color="yellow.600" fontWeight="bold">
+                            ⭐ BANNER
+                          </Text>
+                        )}
+                      </Heading>
+                      <Text fontSize="sm" color="gray.600">
+                        {formatEventTime(event)}
+                      </Text>
+                      {event.eventDescription && (
+                        <Text fontSize="sm" color="gray.500" mt={2} noOfLines={2}>
+                          {event.eventDescription}
+                        </Text>
+                      )}
+                      {event.eventLocation && (
+                        <Text fontSize="xs" color="gray.500" mt={1}>
+                          📍 {event.eventLocation}
+                        </Text>
+                      )}
+                    </Box>
+                    <EditIcon color="gray.400" />
+                  </Flex>
+                </Box>
+              ))}
+            </VStack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
 
       {/* Event Edit Modal */}
       <Modal isOpen={isEventEditModalOpen} onClose={onEventEditModalClose}>

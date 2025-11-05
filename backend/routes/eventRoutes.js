@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Event = require('../models/eventModel');
+const ArchivedEvent = require('../models/archivedEventModel');
 const { protect } = require('../middleware/authMiddleware');
 
 // Get all events (Public)
@@ -8,6 +9,18 @@ router.get('/', async (req, res) => {
   try {
     const events = await Event.find().sort({ eventDate: 1 });
     res.json(events);
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+// @desc   Get all archived events
+// @route  GET /api/events/archived
+// @access Private
+router.get('/archived', protect, async (req, res) => {
+  try {
+    const archivedEvents = await ArchivedEvent.find().sort({ archivedAt: -1 });
+    res.json(archivedEvents);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }
@@ -83,8 +96,35 @@ router.delete('/:id', protect, async (req, res) => {
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
+
+    // Archive the event before deletion
+    const archivedEvent = new ArchivedEvent({
+      eventName: event.eventName,
+      eventDate: event.eventDate,
+      eventTime: event.eventTime,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      isAllDay: event.isAllDay,
+      eventDescription: event.eventDescription,
+      eventLocation: event.eventLocation,
+      eventCoordinates: event.eventCoordinates,
+      eventLink: event.eventLink,
+      eventLinkText: event.eventLinkText,
+      isBannerEvent: event.isBannerEvent,
+      originalCreatedAt: event.createdAt,
+      originalUpdatedAt: event.updatedAt,
+      originalId: event._id
+    });
+
+    await archivedEvent.save();
+
+    // Now delete the original event
     await event.deleteOne();
-    res.json({ message: 'Event removed' });
+    
+    res.json({ 
+      message: 'Event archived and removed',
+      archivedId: archivedEvent._id
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }
