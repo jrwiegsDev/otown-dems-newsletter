@@ -23,6 +23,15 @@ router.post('/', async (req, res) => {
   try {
     const { firstName, lastName, email } = req.body;
 
+    // Validate required fields
+    if (!firstName || !firstName.trim()) {
+      return res.status(400).json({ message: 'Please provide a first name' });
+    }
+
+    if (!lastName || !lastName.trim()) {
+      return res.status(400).json({ message: 'Please provide a last name' });
+    }
+
     if (!email) {
       return res.status(400).json({ message: 'Please provide an email' });
     }
@@ -36,23 +45,13 @@ router.post('/', async (req, res) => {
     const existingSubscriber = await Subscriber.findOne({ email: email.toLowerCase() });
 
     if (existingSubscriber) {
-      // Update existing subscriber with new information (only if provided)
-      const updateData = {};
-      
-      // Only update firstName if provided and it's different
-      if (firstName && firstName.trim() !== '') {
-        updateData.firstName = firstName.trim();
-      }
-      
-      // Only update lastName if provided (can be empty string to clear it)
-      if (lastName !== undefined) {
-        updateData.lastName = lastName.trim();
-      }
-
-      // Update the existing subscriber
+      // Update existing subscriber with new information
       const updatedSubscriber = await Subscriber.findOneAndUpdate(
         { email: email.toLowerCase() },
-        updateData,
+        {
+          firstName: firstName.trim(),
+          lastName: lastName.trim()
+        },
         { new: true, runValidators: true }
       );
 
@@ -61,10 +60,10 @@ router.post('/', async (req, res) => {
         message: 'Your information has been updated successfully!'
       });
     } else {
-      // Create new subscriber if email doesn't exist
+      // Create new subscriber
       const newSubscriber = await Subscriber.create({
-        firstName: firstName ? firstName.trim() : undefined,
-        lastName: lastName ? lastName.trim() : undefined,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         email: email.toLowerCase()
       });
 
