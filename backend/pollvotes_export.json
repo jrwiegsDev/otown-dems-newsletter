@@ -1,0 +1,441 @@
+[{
+	"_id": {
+		"$oid": "68ffcb6d6e90f83d526478a3"
+	},
+	"emailHash": "d44bee57f0e449ea7da32336ac261023b56a6aedf194861c2391a137b439bb24",
+	"weekIdentifier": "2025-W44",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-10-27T19:43:40.888Z"
+	},
+	"selectedIssues": [
+		"Treatment of Immigrants by ICE",
+		"Government Corruption",
+		"State of U.S. Democracy"
+	],
+	"updatedAt": {
+		"$date": "2025-10-27T19:43:40.888Z"
+	},
+	"votedAt": {
+		"$date": "2025-10-27T19:43:40.887Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "68ffdef66e90f83d526478d7"
+	},
+	"weekIdentifier": "2025-W44",
+	"emailHash": "8061734a8d2141287a0096ee169e186482ad4a6c4c42226fc17f8e57584006a1",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-10-27T21:07:02.402Z"
+	},
+	"selectedIssues": [
+		"Government Corruption",
+		"Cost of Living / Inflation",
+		"Treatment of Immigrants by ICE"
+	],
+	"updatedAt": {
+		"$date": "2025-10-27T21:07:02.402Z"
+	},
+	"votedAt": {
+		"$date": "2025-10-27T21:07:02.401Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "68ffdf2b6e90f83d526478d9"
+	},
+	"weekIdentifier": "2025-W44",
+	"emailHash": "fecb98055b6a0e0a81edf810693d0a0b90729579d610abafde6341de38a5f453",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-10-27T21:07:55.956Z"
+	},
+	"selectedIssues": [
+		"Cost of Living / Inflation",
+		"Government Shutdown",
+		"Government Corruption"
+	],
+	"updatedAt": {
+		"$date": "2025-10-27T21:07:55.956Z"
+	},
+	"votedAt": {
+		"$date": "2025-10-27T21:07:55.955Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "68ffe66c6e90f83d526478f1"
+	},
+	"emailHash": "87fd2252642782722fd814bcb25b66a5467a8a9fac67ff321a2e52315fdd3174",
+	"weekIdentifier": "2025-W44",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-10-27T21:38:52.364Z"
+	},
+	"selectedIssues": [
+		"Cost of Living / Inflation",
+		"State of U.S. Democracy",
+		"Government Corruption"
+	],
+	"updatedAt": {
+		"$date": "2025-10-27T21:38:52.364Z"
+	},
+	"votedAt": {
+		"$date": "2025-10-27T21:38:52.364Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "68ffe8926e90f83d526478fb"
+	},
+	"emailHash": "6c868e261ae9e57230f895e8eb39ff5db04075e012e4083bb3df9d8600a10729",
+	"weekIdentifier": "2025-W44",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-10-27T21:48:02.65Z"
+	},
+	"selectedIssues": [
+		"Cost of Living / Inflation",
+		"State of U.S. Democracy",
+		"Treatment of Immigrants by ICE"
+	],
+	"updatedAt": {
+		"$date": "2025-10-27T21:48:02.65Z"
+	},
+	"votedAt": {
+		"$date": "2025-10-27T21:48:02.649Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "68ffeb526e90f83d5264790c"
+	},
+	"emailHash": "e58637f7d3bb24064f0ac2040c4f20113e24f72449097bf6f61833dbb041bc0f",
+	"weekIdentifier": "2025-W44",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-10-27T21:59:46.829Z"
+	},
+	"selectedIssues": [
+		"Government Corruption",
+		"Cost of Living / Inflation",
+		"State of U.S. Democracy"
+	],
+	"updatedAt": {
+		"$date": "2025-10-27T21:59:46.829Z"
+	},
+	"votedAt": {
+		"$date": "2025-10-27T21:59:46.829Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "68fff6f46e90f83d52647918"
+	},
+	"weekIdentifier": "2025-W44",
+	"emailHash": "220527005ae0220ae79c24bbbed0137979cf8acdf32f6802ba7ad5f0c2bf77a4",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-10-27T22:49:24.182Z"
+	},
+	"selectedIssues": [
+		"Cost of Living / Inflation",
+		"Climate Change",
+		"Personal Financial Situation"
+	],
+	"updatedAt": {
+		"$date": "2025-10-27T22:49:24.182Z"
+	},
+	"votedAt": {
+		"$date": "2025-10-27T22:49:24.182Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "690004f96e90f83d5264792b"
+	},
+	"emailHash": "1a09d47c50ab4b195c81aac682e8683e80455f512705c8901210f4521c64a45e",
+	"weekIdentifier": "2025-W44",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-10-27T23:49:13.003Z"
+	},
+	"selectedIssues": [
+		"Cost of Living / Inflation",
+		"State of U.S. Democracy",
+		"Treatment of Immigrants by ICE"
+	],
+	"updatedAt": {
+		"$date": "2025-10-27T23:49:13.003Z"
+	},
+	"votedAt": {
+		"$date": "2025-10-27T23:49:13.003Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "6900ad516e90f83d52647b32"
+	},
+	"weekIdentifier": "2025-W44",
+	"emailHash": "205b06769758846ddb890ecce93572e84cd5837f7a36a286422b7aa0ee43f0ab",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-10-28T11:47:28.973Z"
+	},
+	"selectedIssues": [
+		"State of U.S. Democracy",
+		"Government Corruption",
+		"Treatment of Immigrants by ICE"
+	],
+	"updatedAt": {
+		"$date": "2025-10-28T11:47:28.973Z"
+	},
+	"votedAt": {
+		"$date": "2025-10-28T11:47:28.973Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "69015a9d6e90f83d52648bce"
+	},
+	"weekIdentifier": "2025-W44",
+	"emailHash": "e0c5f94c52148a379373dc8df8869f86fb2250dc05e466e19ba3301666965779",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-10-29T00:06:53.174Z"
+	},
+	"selectedIssues": [
+		"Government Corruption",
+		"State of U.S. Democracy",
+		"Treatment of Immigrants by ICE"
+	],
+	"updatedAt": {
+		"$date": "2025-10-29T00:06:53.174Z"
+	},
+	"votedAt": {
+		"$date": "2025-10-29T00:06:53.173Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "690167ad6e90f83d52648bdb"
+	},
+	"emailHash": "ae509e298af4bafa047542df39099604d3b9b9f1ba6a28b997f71ba872e5b940",
+	"weekIdentifier": "2025-W44",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-10-29T01:02:37.058Z"
+	},
+	"selectedIssues": [
+		"Government Corruption",
+		"Treatment of Immigrants by ICE",
+		"Government Shutdown"
+	],
+	"updatedAt": {
+		"$date": "2025-10-29T01:02:37.058Z"
+	},
+	"votedAt": {
+		"$date": "2025-10-29T01:02:37.057Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "69062e736e90f83d5264cca4"
+	},
+	"weekIdentifier": "2025-W44",
+	"emailHash": "e717603bd6910d2f85936305dfff691e36b0b398af8b92f4cbbd99711e4b0202",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-11-01T15:59:47.967Z"
+	},
+	"selectedIssues": [
+		"Government Corruption",
+		"Cost of Living / Inflation",
+		"Treatment of Immigrants by ICE"
+	],
+	"updatedAt": {
+		"$date": "2025-11-01T15:59:47.967Z"
+	},
+	"votedAt": {
+		"$date": "2025-11-01T15:59:47.965Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "6906e1c76e90f83d5264cdc8"
+	},
+	"emailHash": "ba17cd4ef3de7ee4cfa10b1ed3c1f6b00b2ae8143a6f59fc063e1c01c03d7f9a",
+	"weekIdentifier": "2025-W45",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-11-02T04:44:55.021Z"
+	},
+	"selectedIssues": [
+		"Cost of Living / Inflation",
+		"Government Shutdown",
+		"Treatment of Immigrants by ICE"
+	],
+	"updatedAt": {
+		"$date": "2025-11-02T04:44:55.021Z"
+	},
+	"votedAt": {
+		"$date": "2025-11-02T04:44:55.021Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "6908cd1d6e90f83d5264d51a"
+	},
+	"weekIdentifier": "2025-W45",
+	"emailHash": "6c868e261ae9e57230f895e8eb39ff5db04075e012e4083bb3df9d8600a10729",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-11-03T15:41:17.685Z"
+	},
+	"selectedIssues": [
+		"Government Shutdown",
+		"Treatment of Immigrants by ICE",
+		"State of U.S. Democracy"
+	],
+	"updatedAt": {
+		"$date": "2025-11-03T15:41:17.685Z"
+	},
+	"votedAt": {
+		"$date": "2025-11-03T15:41:17.684Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "69095c796e90f83d5264e421"
+	},
+	"weekIdentifier": "2025-W45",
+	"emailHash": "d44bee57f0e449ea7da32336ac261023b56a6aedf194861c2391a137b439bb24",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-11-04T01:52:57.334Z"
+	},
+	"selectedIssues": [
+		"State of U.S. Democracy",
+		"Treatment of Immigrants by ICE",
+		"Cost of Living / Inflation"
+	],
+	"updatedAt": {
+		"$date": "2025-11-04T01:52:57.334Z"
+	},
+	"votedAt": {
+		"$date": "2025-11-04T01:52:57.334Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "690d3e14132401f53fb8f9e0"
+	},
+	"weekIdentifier": "2025-W45",
+	"emailHash": "220527005ae0220ae79c24bbbed0137979cf8acdf32f6802ba7ad5f0c2bf77a4",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-11-07T00:32:20.581Z"
+	},
+	"selectedIssues": [
+		"Cost of Living / Inflation",
+		"Government Shutdown",
+		"Government Corruption"
+	],
+	"updatedAt": {
+		"$date": "2025-11-07T00:32:20.581Z"
+	},
+	"votedAt": {
+		"$date": "2025-11-07T00:32:20.579Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "690e36dd132401f53fb8fd1e"
+	},
+	"emailHash": "37c72cdb9bbe6e98dd75049aa77384f31cd9b182fee04f3e401fecd9c738e402",
+	"weekIdentifier": "2025-W45",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-11-07T18:13:49.4Z"
+	},
+	"selectedIssues": [
+		"The Economy",
+		"Government Shutdown",
+		"Cost of Living / Inflation"
+	],
+	"updatedAt": {
+		"$date": "2025-11-07T18:13:49.4Z"
+	},
+	"votedAt": {
+		"$date": "2025-11-07T18:13:49.4Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "690e449c132401f53fb8fd32"
+	},
+	"weekIdentifier": "2025-W45",
+	"emailHash": "e58637f7d3bb24064f0ac2040c4f20113e24f72449097bf6f61833dbb041bc0f",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-11-07T19:12:28.329Z"
+	},
+	"selectedIssues": [
+		"Cost of Living / Inflation",
+		"State of U.S. Democracy",
+		"Government Corruption"
+	],
+	"updatedAt": {
+		"$date": "2025-11-07T19:12:28.329Z"
+	},
+	"votedAt": {
+		"$date": "2025-11-07T19:12:28.328Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "690eb95c132401f53fb902e7"
+	},
+	"emailHash": "b9b827946688aab9c89ad656b751341ec224fdfdea36229cbbd549101839e0b0",
+	"weekIdentifier": "2025-W45",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-11-08T03:30:36.546Z"
+	},
+	"selectedIssues": [
+		"Government Corruption",
+		"The Economy",
+		"Disruption of Federal Government Services"
+	],
+	"updatedAt": {
+		"$date": "2025-11-08T03:30:36.546Z"
+	},
+	"votedAt": {
+		"$date": "2025-11-08T03:30:36.546Z"
+	}
+},
+{
+	"_id": {
+		"$oid": "690f9f29132401f53fb9042c"
+	},
+	"weekIdentifier": "2025-W45",
+	"emailHash": "12b6630888c45d1a372e784f2001015c883a6bb1d7121cdca83611dfd37d5cf1",
+	"__v": 0,
+	"createdAt": {
+		"$date": "2025-11-08T19:51:05.592Z"
+	},
+	"selectedIssues": [
+		"Government Corruption",
+		"The Economy",
+		"State of U.S. Democracy"
+	],
+	"updatedAt": {
+		"$date": "2025-11-08T19:51:05.592Z"
+	},
+	"votedAt": {
+		"$date": "2025-11-08T19:51:05.592Z"
+	}
+}]
+
