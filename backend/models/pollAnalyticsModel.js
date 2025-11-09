@@ -18,10 +18,10 @@ const pollAnalyticsSchema = new mongoose.Schema({
     default: 0
   },
   issueCounts: {
-    type: Map,
-    of: Number,
+    type: mongoose.Schema.Types.Mixed,
     required: true
     // Example: { "Government Corruption": 45, "Cost of Living / Inflation": 67, ... }
+    // Note: Using Mixed type instead of Map because Mongoose Maps don't support keys with periods
   },
   archivedAt: {
     type: Date,
