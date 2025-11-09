@@ -19,22 +19,40 @@ const VALID_ISSUES = [
 ];
 
 // Helper function to get current week identifier (ISO week)
+// ISO 8601: Week starts on Monday, Week 1 contains Jan 4th
 function getCurrentWeekIdentifier() {
   const now = new Date();
-  const startOfYear = new Date(now.getFullYear(), 0, 1);
-  const daysSinceStart = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));
-  const weekNumber = Math.ceil((daysSinceStart + startOfYear.getDay() + 1) / 7);
-  return `${now.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
+  
+  // Get the Thursday of the current week (ISO week date system uses Thursday)
+  const thursday = new Date(now);
+  thursday.setDate(now.getDate() + (4 - (now.getDay() || 7)));
+  
+  // Get January 1st of the Thursday's year
+  const yearStart = new Date(thursday.getFullYear(), 0, 1);
+  
+  // Calculate week number
+  const weekNumber = Math.ceil((((thursday - yearStart) / 86400000) + 1) / 7);
+  
+  return `${thursday.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
 }
 
 // Helper function to get previous week identifier
+// ISO 8601: Week starts on Monday, Week 1 contains Jan 4th
 function getPreviousWeekIdentifier() {
-  const now = new Date();
-  const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const startOfYear = new Date(lastWeek.getFullYear(), 0, 1);
-  const daysSinceStart = Math.floor((lastWeek - startOfYear) / (24 * 60 * 60 * 1000));
-  const weekNumber = Math.ceil((daysSinceStart + startOfYear.getDay() + 1) / 7);
-  return `${lastWeek.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
+  const lastWeek = new Date();
+  lastWeek.setDate(lastWeek.getDate() - 7);
+  
+  // Get the Thursday of the previous week
+  const thursday = new Date(lastWeek);
+  thursday.setDate(lastWeek.getDate() + (4 - (lastWeek.getDay() || 7)));
+  
+  // Get January 1st of the Thursday's year
+  const yearStart = new Date(thursday.getFullYear(), 0, 1);
+  
+  // Calculate week number
+  const weekNumber = Math.ceil((((thursday - yearStart) / 86400000) + 1) / 7);
+  
+  return `${thursday.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
 }
 
 // Archive last week's poll results and clear old votes
@@ -43,6 +61,22 @@ async function archiveAndResetPoll() {
     console.log('🗳️  Starting weekly poll reset and archival...');
 
     const now = new Date();
+    
+    // Safety check: Only allow reset on Sunday or Monday at specific times
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday
+    const hour = now.getHours();
+    
+    // Only run if it's Sunday night (23:00-23:59) or Monday early morning (00:00-01:00)
+    const isSundayNight = dayOfWeek === 0 && hour === 23;
+    const isMondayMorning = dayOfWeek === 1 && hour <= 1;
+    
+    if (!isSundayNight && !isMondayMorning) {
+      console.log(`⚠️  Reset attempted at wrong time: ${now.toLocaleString()}`);
+      console.log(`   Day: ${dayOfWeek}, Hour: ${hour}`);
+      console.log(`   Resets only allowed Sunday 23:00-23:59 or Monday 00:00-01:00`);
+      return;
+    }
+    
     const currentWeekId = getCurrentWeekIdentifier();
     
     // Important: When this runs on Monday at midnight (start of new week),
