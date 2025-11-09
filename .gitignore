@@ -7,4 +7,4 @@
 *.env.local
 
 # Build folder from React
-/frontend/build
+/frontend/buildbackend/pollvotes_export.json

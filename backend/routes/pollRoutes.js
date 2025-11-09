@@ -9,12 +9,21 @@ const PollAnalytics = require('../models/pollAnalyticsModel');
 const { protect } = require('../middleware/authMiddleware');
 
 // Helper function to get current week identifier (ISO week)
+// ISO 8601: Week starts on Monday, Week 1 contains Jan 4th
 function getCurrentWeekIdentifier() {
   const now = new Date();
-  const startOfYear = new Date(now.getFullYear(), 0, 1);
-  const daysSinceStart = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));
-  const weekNumber = Math.ceil((daysSinceStart + startOfYear.getDay() + 1) / 7);
-  return `${now.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
+  
+  // Get the Thursday of the current week (ISO week date system uses Thursday)
+  const thursday = new Date(now);
+  thursday.setDate(now.getDate() + (4 - (now.getDay() || 7)));
+  
+  // Get January 1st of the Thursday's year
+  const yearStart = new Date(thursday.getFullYear(), 0, 1);
+  
+  // Calculate week number
+  const weekNumber = Math.ceil((((thursday - yearStart) / 86400000) + 1) / 7);
+  
+  return `${thursday.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
 }
 
 // Helper function to hash email (SHA-256)
