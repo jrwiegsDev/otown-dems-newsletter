@@ -134,10 +134,13 @@ async function archiveAndResetPoll() {
       // Check if analytics already exist for this week
       const existingAnalytics = await PollAnalytics.findOne({ weekIdentifier: weekId });
       
+      // Convert Map to plain object for Mongoose
+      const issueCountsObject = Object.fromEntries(issueCounts);
+      
       if (existingAnalytics) {
         console.log(`⚠️  Analytics already exist for ${weekId}, updating...`);
         existingAnalytics.totalVotes = votes.length;
-        existingAnalytics.issueCounts = issueCounts;
+        existingAnalytics.issueCounts = issueCountsObject;
         existingAnalytics.archivedAt = new Date();
         await existingAnalytics.save();
       } else {
@@ -146,7 +149,7 @@ async function archiveAndResetPoll() {
           weekIdentifier: weekId,
           weekEnding: weekEnding,
           totalVotes: votes.length,
-          issueCounts: issueCounts,
+          issueCounts: issueCountsObject,
           archivedAt: new Date()
         });
       }

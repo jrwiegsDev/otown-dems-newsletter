@@ -255,10 +255,13 @@ router.post('/reset-week', protect, async (req, res) => {
       // Check if analytics already exist for this week
       const existingAnalytics = await PollAnalytics.findOne({ weekIdentifier });
       
+      // Convert Map to plain object for Mongoose
+      const issueCountsObject = Object.fromEntries(issueCounts);
+      
       if (existingAnalytics) {
         // Update existing analytics
         existingAnalytics.totalVotes = currentVotes.length;
-        existingAnalytics.issueCounts = issueCounts;
+        existingAnalytics.issueCounts = issueCountsObject;
         await existingAnalytics.save();
       } else {
         // Create new analytics entry
@@ -266,7 +269,7 @@ router.post('/reset-week', protect, async (req, res) => {
           weekIdentifier,
           weekEnding,
           totalVotes: currentVotes.length,
-          issueCounts
+          issueCounts: issueCountsObject
         });
       }
     }
