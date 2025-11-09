@@ -271,7 +271,7 @@ const AnalyticsDashboard = () => {
     // Get top 5 issues by total count
     const issueTotals = {};
     analyticsData.forEach(record => {
-      record.issueCounts.forEach((count, issue) => {
+      Object.entries(record.issueCounts || {}).forEach(([issue, count]) => {
         issueTotals[issue] = (issueTotals[issue] || 0) + count;
       });
     });
@@ -292,7 +292,7 @@ const AnalyticsDashboard = () => {
 
       return {
         label: issue,
-        data: analyticsData.map(record => record.issueCounts.get(issue) || 0).reverse(),
+        data: analyticsData.map(record => record.issueCounts?.[issue] || 0).reverse(),
         borderColor: colors[index],
         backgroundColor: colors[index] + '33',
         tension: 0.3
@@ -678,7 +678,7 @@ const AnalyticsDashboard = () => {
                           // Find top issue
                           let topIssue = '';
                           let topCount = 0;
-                          record.issueCounts.forEach((count, issue) => {
+                          Object.entries(record.issueCounts || {}).forEach(([issue, count]) => {
                             if (count > topCount) {
                               topCount = count;
                               topIssue = issue;
