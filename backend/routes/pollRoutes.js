@@ -10,12 +10,15 @@ const { protect } = require('../middleware/authMiddleware');
 
 // Helper function to get current week identifier (ISO week)
 // ISO 8601: Week starts on Monday, Week 1 contains Jan 4th
+// Uses America/Chicago timezone for consistency
 function getCurrentWeekIdentifier() {
-  const now = new Date();
+  // Get current time in Chicago timezone
+  const nowUTC = new Date();
+  const chicagoTime = new Date(nowUTC.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
   
   // Get the Thursday of the current week (ISO week date system uses Thursday)
-  const thursday = new Date(now);
-  thursday.setDate(now.getDate() + (4 - (now.getDay() || 7)));
+  const thursday = new Date(chicagoTime);
+  thursday.setDate(chicagoTime.getDate() + (4 - (chicagoTime.getDay() || 7)));
   
   // Get January 1st of the Thursday's year
   const yearStart = new Date(thursday.getFullYear(), 0, 1);
