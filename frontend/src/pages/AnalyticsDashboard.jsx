@@ -405,9 +405,11 @@ const AnalyticsDashboard = () => {
     <Box w="100%">
       <Tabs colorScheme="blue" size="lg" variant="enclosed">
         <TabList mb={4} flexWrap="wrap">
-          <Tab fontWeight="semibold" fontSize="lg">📊 Poll Analytics</Tab>
-          <Tab fontWeight="semibold" fontSize="lg">⚙️ Manage Issues</Tab>
-          <Tab fontWeight="semibold" fontSize="lg">🙋 Volunteers</Tab>
+          <Tab fontWeight="semibold" fontSize="lg">Poll Analytics</Tab>
+          {user?.role === 'superadmin' && (
+            <Tab fontWeight="semibold" fontSize="lg">Manage Issues</Tab>
+          )}
+          <Tab fontWeight="semibold" fontSize="lg">Volunteers</Tab>
         </TabList>
 
         <TabPanels>
@@ -416,7 +418,7 @@ const AnalyticsDashboard = () => {
             <VStack spacing={6} align="stretch" w="100%">
               {/* Live Current Week Analytics */}
               <Box>
-                <Heading size="lg" mb={4}>📊 Live Results - Current Week ({transformedWeekStats?.weekIdentifier})</Heading>
+                <Heading size="lg" mb={4}>Live Results - Current Week ({transformedWeekStats?.weekIdentifier})</Heading>
                 
                 {/* Summary Stats Grid */}
                 <Grid templateColumns={{ base: '1fr', md: 'repeat(3, 1fr)' }} gap={4} mb={6}>
@@ -564,13 +566,13 @@ const AnalyticsDashboard = () => {
                   width={{ base: "100%", md: "auto" }}
                   onClick={() => setShowResetModal(true)}
                 >
-                  🚨 Emergency Reset Current Week
+                  Emergency Reset Current Week
                 </Button>
               </Box>
 
               {/* Historical Trends Charts - Compact Grid */}
               <Box>
-                <Heading size="lg" mb={2}>📈 Historical Trends</Heading>
+                <Heading size="lg" mb={2}>Historical Trends</Heading>
                 <Text color="gray.500" mb={4}>
                   Data from weekly resets (last 52 weeks). 
                   {analyticsData.length === 0 && ' Archive data will appear after the first weekly reset.'}
@@ -638,7 +640,7 @@ const AnalyticsDashboard = () => {
                 ) : (
                   <Box bg={bgColor} border="1px" borderColor={borderColor} borderRadius="md" p={8} textAlign="center">
                     <Text color="gray.500" fontSize="lg" mb={2}>
-                      📊 No historical data yet
+                      No historical data yet
                     </Text>
                     <Text color="gray.400" fontSize="sm">
                       Historical trends will appear after your first weekly poll reset. 
@@ -650,7 +652,7 @@ const AnalyticsDashboard = () => {
 
               {/* Weekly Results Archive Table */}
               <Box>
-                <Heading size="lg" mb={2}>📋 Weekly Results Archive</Heading>
+                <Heading size="lg" mb={2}>Weekly Results Archive</Heading>
                 <Text color="gray.500" mb={4}>
                   Historical data from completed weeks.
                   {analyticsData.length === 0 && ' Archive entries will appear after weekly resets.'}
@@ -727,7 +729,7 @@ const AnalyticsDashboard = () => {
             maxW="200px"
           />
           <Button colorScheme="green" onClick={handleExportCSV}>
-            📊 Download CSV
+            Download CSV
           </Button>
         </HStack>
               </Box>
@@ -735,9 +737,11 @@ const AnalyticsDashboard = () => {
           </TabPanel>
 
           {/* Manage Poll Issues Tab */}
-          <TabPanel px={0}>
-            <PollIssueManager user={user} />
-          </TabPanel>
+          {user?.role === 'superadmin' && (
+            <TabPanel px={0}>
+              <PollIssueManager user={user} />
+            </TabPanel>
+          )}
 
           {/* Volunteer Management Tab */}
           <TabPanel px={0}>
@@ -752,7 +756,7 @@ const AnalyticsDashboard = () => {
                   p={5}
                   h="100%"
                 >
-                  <Heading size="lg" mb={4}>📊 Volunteer Analytics</Heading>
+                  <Heading size="lg" mb={4}>Volunteer Analytics</Heading>
                   
                   {/* Summary Stats */}
                   <Grid templateColumns="repeat(2, 1fr)" gap={4} mb={6}>
@@ -865,7 +869,7 @@ const AnalyticsDashboard = () => {
       <Modal isOpen={showResetModal} onClose={() => setShowResetModal(false)} isCentered>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>⚠️ Confirm Emergency Reset</ModalHeader>
+          <ModalHeader>Confirm Emergency Reset</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack align="start" spacing={3}>

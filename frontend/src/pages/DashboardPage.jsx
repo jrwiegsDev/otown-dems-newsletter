@@ -7,6 +7,7 @@ import DashboardLayout from '../components/dashboard/DashboardLayout';
 import NewsletterDashboard from './NewsletterDashboard';
 import CalendarDashboard from './CalendarDashboard';
 import AnalyticsDashboard from './AnalyticsDashboard';
+import StaffManagement from '../components/StaffManagement';
 
 const DashboardPage = () => {
   const { user } = useAuth();
@@ -16,7 +17,7 @@ const DashboardPage = () => {
   const eventHook = useEvents(user);
   const announcementHook = useAnnouncements();
 
-  // State for dashboard view - now supports 3 views
+  // State for dashboard view - now supports 4 views
   const [currentView, setCurrentView] = useState('newsletter');
 
   const renderView = () => {
@@ -27,6 +28,8 @@ const DashboardPage = () => {
         return <CalendarDashboard {...eventHook} {...announcementHook} />;
       case 'analytics':
         return <AnalyticsDashboard />;
+      case 'staff':
+        return user?.role === 'superadmin' ? <StaffManagement user={user} /> : null;
       default:
         return <NewsletterDashboard {...subscriberHook} />;
     }
