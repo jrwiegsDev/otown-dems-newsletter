@@ -13,6 +13,7 @@ const eventRoutes = require('./routes/eventRoutes');
 const announcementRoutes = require('./routes/announcementRoutes');
 const pollRoutes = require('./routes/pollRoutes');
 const volunteerRoutes = require('./routes/volunteerRoutes');
+const configRoutes = require('./routes/configRoutes');
 
 const app = express();
 
@@ -52,6 +53,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/poll', pollRoutes);
 app.use('/api/volunteers', volunteerRoutes);
+app.use('/api/config', configRoutes);
 
 // --- 3. Create an HTTP server using the Express app ---
 // This allows both Express (HTTP) and WebSockets (WS) to run on the same port.
@@ -59,6 +61,9 @@ const server = http.createServer(app);
 
 // --- 4. Create a WebSocket server attached to the HTTP server ---
 const wss = new WebSocket.Server({ server });
+
+// Make wss available to routes for broadcasting
+app.locals.wss = wss;
 
 // --- 5. Set to keep track of all connected clients ---
 const clients = new Set();
