@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -7,16 +8,76 @@ import {
   Heading,
   IconButton,
   Stack,
+  Switch,
   Text,
+  FormControl,
+  FormLabel,
   useColorMode,
+  useToast,
 } from '@chakra-ui/react';
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
 import ChangePasswordButton from '../ChangePasswordButton';
+import api from '../../api/axiosConfig';
 
 const DashboardLayout = ({ currentView, onViewChange, children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { colorMode, toggleColorMode } = useColorMode();
+  const toast = useToast();
+  const [snowfallEnabled, setSnowfallEnabled] = useState(false);
+  const [isTogglingSnow, setIsTogglingSnow] = useState(false);
+
+  // Fetch initial snowfall status
+  useEffect(() => {
+    const fetchSnowfallStatus = async () => {
+      try {
+        const response = await api.get('/api/config/snowfall');
+        setSnowfallEnabled(response.data.snowfallEnabled);
+      } catch (error) {
+        console.error('Error fetching snowfall status:', error);
+      }
+    };
+    
+    if (user?.role === 'superadmin') {
+      fetchSnowfallStatus();
+    }
+  }, [user]);
+
+  // Handle snowfall toggle
+  const handleSnowfallToggle = async () => {
+    setIsTogglingSnow(true);
+    try {
+      const response = await api.post('/api/config/snowfall', {
+        snowfallEnabled: !snowfallEnabled
+      }, {
+        headers: {
+          Authorization: `Bearer ${user.token}`
+        }
+      });
+      
+      setSnowfallEnabled(response.data.snowfallEnabled);
+      toast({
+        title: response.data.snowfallEnabled ? 'Snowfall Enabled' : 'Snowfall Disabled',
+        description: response.data.snowfallEnabled 
+          ? 'The "Let It Snow!" button is now visible on the public site' 
+          : 'The "Let It Snow!" button has been hidden from the public site',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error toggling snowfall:', error);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to toggle snowfall feature',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsTogglingSnow(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -45,6 +106,23 @@ const DashboardLayout = ({ currentView, onViewChange, children }) => {
         <Heading>{getViewTitle()}</Heading>
         <Stack direction="row" spacing={4} alignItems="center">
           {user && <Text>Welcome, {user.username}!</Text>}
+          
+          {/* Snowfall Toggle - Superadmin Only */}
+          {user?.role === 'superadmin' && (
+            <FormControl display="flex" alignItems="center" width="auto">
+              <FormLabel htmlFor="snowfall-toggle" mb="0" mr={2} fontSize="sm">
+                Snowfall
+              </FormLabel>
+              <Switch
+                id="snowfall-toggle"
+                isChecked={snowfallEnabled}
+                onChange={handleSnowfallToggle}
+                isDisabled={isTogglingSnow}
+                colorScheme="blue"
+              />
+            </FormControl>
+          )}
+          
           <Button 
             onClick={() => onViewChange('newsletter')}
             colorScheme={currentView === 'newsletter' ? 'blue' : 'gray'}
