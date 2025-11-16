@@ -53,6 +53,7 @@ import {
 } from '@chakra-ui/react';
 import api from '../api/axiosConfig';
 import VolunteerManagement from '../components/VolunteerManagement';
+import PollIssueManager from '../components/PollIssueManager';
 import useVolunteers from '../hooks/useVolunteers';
 
 // Register Chart.js components
@@ -403,13 +404,14 @@ const AnalyticsDashboard = () => {
   return (
     <Box w="100%">
       <Tabs colorScheme="blue" size="lg" variant="enclosed">
-        <TabList mb={4}>
-          <Tab fontWeight="semibold" fontSize="lg">📊 Weekly Poll Analytics</Tab>
-          <Tab fontWeight="semibold" fontSize="lg">🙋 Volunteer Management</Tab>
+        <TabList mb={4} flexWrap="wrap">
+          <Tab fontWeight="semibold" fontSize="lg">📊 Poll Analytics</Tab>
+          <Tab fontWeight="semibold" fontSize="lg">⚙️ Manage Issues</Tab>
+          <Tab fontWeight="semibold" fontSize="lg">🙋 Volunteers</Tab>
         </TabList>
 
         <TabPanels>
-          {/* Weekly Poll Analytics Tab */}
+          {/* Poll Analytics Tab */}
           <TabPanel px={0}>
             <VStack spacing={6} align="stretch" w="100%">
               {/* Live Current Week Analytics */}
@@ -451,99 +453,100 @@ const AnalyticsDashboard = () => {
                   </Box>
                 </Grid>
 
-                {/* Live Results Visual */}
+                {/* Live Results - Compact Grid Layout */}
                 {transformedWeekStats?.results && transformedWeekStats.results.length > 0 && (
-                  <Box bg={bgColor} border="1px" borderColor={borderColor} borderRadius="md" p={5} mb={4}>
-                    <Heading size="md" mb={4}>Current Week Issue Distribution</Heading>
-                    <Box h="350px">
-                      <Bar 
-                        data={{
-                          labels: transformedWeekStats.results.map(r => r.issue),
-                          datasets: [{
-                            label: 'Votes',
-                            data: transformedWeekStats.results.map(r => r.count),
-                            backgroundColor: [
-                              '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
-                              '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
-                            ],
-                            borderColor: '#1e293b',
-                            borderWidth: 1
-                          }]
-                        }}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              display: false
+                  <Grid templateColumns={{ base: '1fr', lg: '1fr 1fr' }} gap={6} mb={4}>
+                    {/* Chart */}
+                    <Box bg={bgColor} border="1px" borderColor={borderColor} borderRadius="md" p={5}>
+                      <Heading size="md" mb={4}>Current Week Distribution</Heading>
+                      <Box h="300px">
+                        <Bar 
+                          data={{
+                            labels: transformedWeekStats.results.map(r => r.issue),
+                            datasets: [{
+                              label: 'Votes',
+                              data: transformedWeekStats.results.map(r => r.count),
+                              backgroundColor: [
+                                '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
+                                '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+                              ],
+                              borderColor: '#1e293b',
+                              borderWidth: 1
+                            }]
+                          }}
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                display: false
+                              },
+                              tooltip: {
+                                callbacks: {
+                                  label: function(context) {
+                                    const percentage = transformedWeekStats.results[context.dataIndex].percentage;
+                                    return `${context.parsed.y} votes (${percentage.toFixed(1)}%)`;
+                                  }
+                                }
+                              }
                             },
-                            tooltip: {
-                              callbacks: {
-                                label: function(context) {
-                                  const percentage = transformedWeekStats.results[context.dataIndex].percentage;
-                                  return `${context.parsed.y} votes (${percentage.toFixed(1)}%)`;
+                            scales: {
+                              y: {
+                                beginAtZero: true,
+                                ticks: {
+                                  stepSize: 1,
+                                  precision: 0
+                                },
+                                title: {
+                                  display: true,
+                                  text: 'Votes'
+                                }
+                              },
+                              x: {
+                                ticks: {
+                                  font: {
+                                    size: 10
+                                  },
+                                  maxRotation: 45,
+                                  minRotation: 45
                                 }
                               }
                             }
-                          },
-                          scales: {
-                            y: {
-                              beginAtZero: true,
-                              ticks: {
-                                stepSize: 1,
-                                precision: 0
-                              },
-                              title: {
-                                display: true,
-                                text: 'Number of Votes'
-                              }
-                            },
-                            x: {
-                              ticks: {
-                                font: {
-                                  size: 11
-                                },
-                                maxRotation: 45,
-                                minRotation: 45
-                              }
-                            }
-                          }
-                        }}
-                      />
+                          }}
+                        />
+                      </Box>
                     </Box>
-                  </Box>
-                )}
 
-                {/* Detailed Breakdown Table */}
-                {transformedWeekStats?.results && transformedWeekStats.results.length > 0 && (
-                  <Box bg={bgColor} border="1px" borderColor={borderColor} borderRadius="md" mb={4}>
-                    <TableContainer>
-                      <Table variant="simple">
-                        <Thead bg={tableHeaderBg}>
-                          <Tr>
-                            <Th color="white">Rank</Th>
-                            <Th color="white">Issue</Th>
-                            <Th color="white" isNumeric>Votes</Th>
-                            <Th color="white" isNumeric>Percentage</Th>
-                          </Tr>
-                        </Thead>
-                        <Tbody>
-                          {transformedWeekStats.results.map((result, index) => (
-                            <Tr key={result.issue}>
-                              <Td fontWeight="bold">#{index + 1}</Td>
-                              <Td>{result.issue}</Td>
-                              <Td isNumeric fontWeight="semibold">{result.count}</Td>
-                              <Td isNumeric>
-                                <Badge colorScheme={index === 0 ? 'green' : index === 1 ? 'blue' : 'gray'}>
-                                  {result.percentage.toFixed(1)}%
-                                </Badge>
-                              </Td>
+                    {/* Table */}
+                    <Box bg={bgColor} border="1px" borderColor={borderColor} borderRadius="md" maxH="400px" overflowY="auto">
+                      <TableContainer>
+                        <Table variant="simple" size="sm">
+                          <Thead bg={tableHeaderBg} position="sticky" top={0} zIndex={1}>
+                            <Tr>
+                              <Th color="white">#</Th>
+                              <Th color="white">Issue</Th>
+                              <Th color="white" isNumeric>Votes</Th>
+                              <Th color="white" isNumeric>%</Th>
                             </Tr>
-                          ))}
-                        </Tbody>
-                      </Table>
-                    </TableContainer>
-                  </Box>
+                          </Thead>
+                          <Tbody>
+                            {transformedWeekStats.results.map((result, index) => (
+                              <Tr key={result.issue}>
+                                <Td fontWeight="bold">{index + 1}</Td>
+                                <Td fontSize="sm">{result.issue}</Td>
+                                <Td isNumeric fontWeight="semibold">{result.count}</Td>
+                                <Td isNumeric>
+                                  <Badge colorScheme={index === 0 ? 'green' : index === 1 ? 'blue' : 'gray'} fontSize="xs">
+                                    {result.percentage.toFixed(1)}%
+                                  </Badge>
+                                </Td>
+                              </Tr>
+                            ))}
+                          </Tbody>
+                        </Table>
+                      </TableContainer>
+                    </Box>
+                  </Grid>
                 )}
 
                 {transformedWeekStats?.totalVotes === 0 && (
@@ -565,7 +568,7 @@ const AnalyticsDashboard = () => {
                 </Button>
               </Box>
 
-              {/* Historical Trends Charts */}
+              {/* Historical Trends Charts - Compact Grid */}
               <Box>
                 <Heading size="lg" mb={2}>📈 Historical Trends</Heading>
                 <Text color="gray.500" mb={4}>
@@ -574,10 +577,10 @@ const AnalyticsDashboard = () => {
                 </Text>
                 
                 {analyticsData.length > 0 ? (
-                  <VStack spacing={6}>
-                    <Box bg={bgColor} border="1px" borderColor={borderColor} borderRadius="md" p={5} w="100%">
+                  <Grid templateColumns={{ base: '1fr', lg: 'repeat(2, 1fr)' }} gap={6}>
+                    <Box bg={bgColor} border="1px" borderColor={borderColor} borderRadius="md" p={5}>
                       <Heading size="md" mb={4}>Total Votes Over Time</Heading>
-                      <Box h="300px">
+                      <Box h="250px">
                         <Line 
                           data={chartData.totalVotesData}
                           options={{
@@ -601,9 +604,9 @@ const AnalyticsDashboard = () => {
                       </Box>
                     </Box>
 
-                    <Box bg={bgColor} border="1px" borderColor={borderColor} borderRadius="md" p={5} w="100%">
+                    <Box bg={bgColor} border="1px" borderColor={borderColor} borderRadius="md" p={5}>
                       <Heading size="md" mb={4}>Top 5 Issues Over Time</Heading>
-                      <Box h="300px">
+                      <Box h="250px">
                         <Line 
                           data={chartData.issuesData}
                           options={{
@@ -611,7 +614,12 @@ const AnalyticsDashboard = () => {
                             maintainAspectRatio: false,
                             plugins: {
                               legend: {
-                                position: 'bottom'
+                                position: 'bottom',
+                                labels: {
+                                  font: {
+                                    size: 10
+                                  }
+                                }
                               }
                             },
                             scales: {
@@ -626,7 +634,7 @@ const AnalyticsDashboard = () => {
                         />
                       </Box>
                     </Box>
-                  </VStack>
+                  </Grid>
                 ) : (
                   <Box bg={bgColor} border="1px" borderColor={borderColor} borderRadius="md" p={8} textAlign="center">
                     <Text color="gray.500" fontSize="lg" mb={2}>
@@ -724,6 +732,11 @@ const AnalyticsDashboard = () => {
         </HStack>
               </Box>
             </VStack>
+          </TabPanel>
+
+          {/* Manage Poll Issues Tab */}
+          <TabPanel px={0}>
+            <PollIssueManager user={user} />
           </TabPanel>
 
           {/* Volunteer Management Tab */}
