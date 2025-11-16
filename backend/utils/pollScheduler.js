@@ -4,7 +4,10 @@ const cron = require('node-cron');
 const PollVote = require('../models/pollVoteModel');
 const PollAnalytics = require('../models/pollAnalyticsModel');
 
-// Valid issues list (must match pollRoutes.js)
+// VALID ISSUES: Complete list for historical data validation and archiving
+// NEVER remove items from this list - only add new ones as they become relevant
+// This ensures historical analytics preserve exact vote counts for all issues,
+// even when issues rotate out of active voting
 const VALID_ISSUES = [
   'Government Corruption',
   'Cost of Living / Inflation',
@@ -15,7 +18,8 @@ const VALID_ISSUES = [
   'Treatment of Immigrants by ICE',
   'Climate Change',
   'Crime',
-  'Personal Financial Situation'
+  'Personal Financial Situation',
+  'Releasing the Epstein Files'
 ];
 
 // Helper function to get current week identifier (ISO week)
