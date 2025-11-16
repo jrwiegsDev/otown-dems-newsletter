@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const validator = require('validator');
 const PollVote = require('../models/pollVoteModel');
 const PollAnalytics = require('../models/pollAnalyticsModel');
+const PollConfig = require('../models/pollConfigModel');
 const { protect } = require('../middleware/authMiddleware');
 
 // Helper function to get current week identifier (ISO week)
@@ -34,8 +35,20 @@ function hashEmail(email) {
   return crypto.createHash('sha256').update(email.toLowerCase().trim()).digest('hex');
 }
 
-// Valid issues list
-const VALID_ISSUES = [
+// Default issues (used for initial setup only)
+const DEFAULT_ACTIVE_ISSUES = [
+  'Government Corruption',
+  'Cost of Living / Inflation',
+  'The Economy',
+  'State of US Democracy',
+  'Treatment of Immigrants by ICE',
+  'Climate Change',
+  'Crime',
+  'Personal Financial Situation',
+  'Releasing the Epstein Files'
+];
+
+const DEFAULT_VALID_ISSUES = [
   'Government Corruption',
   'Cost of Living / Inflation',
   'The Economy',
@@ -45,8 +58,62 @@ const VALID_ISSUES = [
   'Treatment of Immigrants by ICE',
   'Climate Change',
   'Crime',
-  'Personal Financial Situation'
+  'Personal Financial Situation',
+  'Releasing the Epstein Files'
 ];
+
+// In-memory cache (loaded from database on startup)
+let ACTIVE_ISSUES = [...DEFAULT_ACTIVE_ISSUES];
+let VALID_ISSUES = [...DEFAULT_VALID_ISSUES];
+
+// Load configuration from database
+async function loadPollConfig() {
+  try {
+    let config = await PollConfig.findOne({ configName: 'default' });
+    
+    if (!config) {
+      // Create initial config in database
+      config = await PollConfig.create({
+        configName: 'default',
+        activeIssues: DEFAULT_ACTIVE_ISSUES,
+        allValidIssues: DEFAULT_VALID_ISSUES
+      });
+      console.log('✅ Created initial poll configuration in database');
+    }
+    
+    // Load into memory
+    ACTIVE_ISSUES = [...config.activeIssues];
+    VALID_ISSUES = [...config.allValidIssues];
+    
+    console.log(`✅ Loaded poll config: ${ACTIVE_ISSUES.length} active, ${VALID_ISSUES.length} total issues`);
+  } catch (error) {
+    console.error('❌ Error loading poll configuration:', error);
+    // Fall back to defaults
+    ACTIVE_ISSUES = [...DEFAULT_ACTIVE_ISSUES];
+    VALID_ISSUES = [...DEFAULT_VALID_ISSUES];
+  }
+}
+
+// Save configuration to database
+async function savePollConfig() {
+  try {
+    await PollConfig.findOneAndUpdate(
+      { configName: 'default' },
+      {
+        activeIssues: ACTIVE_ISSUES,
+        allValidIssues: VALID_ISSUES
+      },
+      { upsert: true, new: true }
+    );
+    console.log('✅ Saved poll configuration to database');
+  } catch (error) {
+    console.error('❌ Error saving poll configuration:', error);
+    throw error;
+  }
+}
+
+// Initialize on module load
+loadPollConfig();
 
 // @desc   Check if email has already voted this week
 // @route  POST /api/poll/check-email
@@ -102,8 +169,8 @@ router.post('/vote', async (req, res) => {
       return res.status(400).json({ message: 'Please select between 1 and 3 issues' });
     }
 
-    // Validate that all selected issues are in the valid list
-    const invalidIssues = selectedIssues.filter(issue => !VALID_ISSUES.includes(issue));
+    // Validate that all selected issues are currently active
+    const invalidIssues = selectedIssues.filter(issue => !ACTIVE_ISSUES.includes(issue));
     if (invalidIssues.length > 0) {
       return res.status(400).json({ message: 'Invalid issue selection' });
     }
@@ -132,7 +199,7 @@ router.post('/vote', async (req, res) => {
       // Fetch current results
       const votes = await PollVote.find({ weekIdentifier });
       const issueCounts = {};
-      VALID_ISSUES.forEach(issue => {
+      ACTIVE_ISSUES.forEach(issue => {
         issueCounts[issue] = 0;
       });
       votes.forEach(v => {
@@ -147,7 +214,7 @@ router.post('/vote', async (req, res) => {
         weekIdentifier,
         totalVotes: votes.length,
         issueCounts,
-        issues: VALID_ISSUES
+        issues: ACTIVE_ISSUES
       });
     }
 
@@ -177,9 +244,9 @@ router.get('/results', async (req, res) => {
     // Get all votes for current week
     const votes = await PollVote.find({ weekIdentifier });
 
-    // Calculate issue counts
+    // Calculate issue counts (only for active issues)
     const issueCounts = {};
-    VALID_ISSUES.forEach(issue => {
+    ACTIVE_ISSUES.forEach(issue => {
       issueCounts[issue] = 0;
     });
 
@@ -192,7 +259,7 @@ router.get('/results', async (req, res) => {
     });
 
     // Sort issues by vote count (descending)
-    const sortedIssues = VALID_ISSUES.slice().sort((a, b) => {
+    const sortedIssues = ACTIVE_ISSUES.slice().sort((a, b) => {
       return issueCounts[b] - issueCounts[a];
     });
 
@@ -221,6 +288,107 @@ router.get('/analytics', async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ message: 'Error fetching analytics', error: error.message });
+  }
+});
+
+// @desc   Get active poll issues (currently available for voting)
+// @route  GET /api/poll/active-issues
+// @access Public
+router.get('/active-issues', async (req, res) => {
+  try {
+    res.status(200).json({
+      issues: ACTIVE_ISSUES,
+      count: ACTIVE_ISSUES.length
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching active issues', error: error.message });
+  }
+});
+
+// @desc   Get all valid issues (for admin management)
+// @route  GET /api/poll/all-issues
+// @access Private
+router.get('/all-issues', protect, async (req, res) => {
+  try {
+    res.status(200).json({
+      issues: VALID_ISSUES,
+      activeIssues: ACTIVE_ISSUES,
+      count: VALID_ISSUES.length
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching all issues', error: error.message });
+  }
+});
+
+// @desc   Update active issues
+// @route  POST /api/poll/update-active-issues
+// @access Private
+router.post('/update-active-issues', protect, async (req, res) => {
+  try {
+    const { activeIssues } = req.body;
+
+    if (!Array.isArray(activeIssues)) {
+      return res.status(400).json({ message: 'activeIssues must be an array' });
+    }
+
+    // Validate that all active issues are in VALID_ISSUES
+    const invalidIssues = activeIssues.filter(issue => !VALID_ISSUES.includes(issue));
+    if (invalidIssues.length > 0) {
+      return res.status(400).json({ 
+        message: 'Invalid issues provided', 
+        invalidIssues 
+      });
+    }
+
+    // Update the ACTIVE_ISSUES array in memory
+    ACTIVE_ISSUES.length = 0;
+    ACTIVE_ISSUES.push(...activeIssues);
+
+    // Save to database
+    await savePollConfig();
+
+    res.status(200).json({
+      message: 'Active issues updated successfully',
+      activeIssues: ACTIVE_ISSUES,
+      count: ACTIVE_ISSUES.length
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating active issues', error: error.message });
+  }
+});
+
+// @desc   Add a new issue to the poll
+// @route  POST /api/poll/add-issue
+// @access Private
+router.post('/add-issue', protect, async (req, res) => {
+  try {
+    const { issueName } = req.body;
+
+    if (!issueName || typeof issueName !== 'string') {
+      return res.status(400).json({ message: 'Issue name is required' });
+    }
+
+    const trimmedName = issueName.trim();
+
+    if (VALID_ISSUES.includes(trimmedName)) {
+      return res.status(400).json({ message: 'Issue already exists' });
+    }
+
+    // Add to both arrays
+    VALID_ISSUES.push(trimmedName);
+    ACTIVE_ISSUES.push(trimmedName);
+
+    // Save to database
+    await savePollConfig();
+
+    res.status(201).json({
+      message: 'Issue added successfully',
+      issue: trimmedName,
+      allIssues: VALID_ISSUES,
+      activeIssues: ACTIVE_ISSUES
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding issue', error: error.message });
   }
 });
 
@@ -285,7 +453,7 @@ router.post('/reset-week', protect, async (req, res) => {
       global.broadcastPollResults({
         weekIdentifier,
         totalVotes: 0,
-        results: VALID_ISSUES.map(issue => ({ issue, count: 0, percentage: 0 })),
+        results: ACTIVE_ISSUES.map(issue => ({ issue, count: 0, percentage: 0 })),
         reset: true
       });
     }
@@ -376,6 +544,126 @@ router.get('/monthly-export/:year/:month', protect, async (req, res) => {
     
   } catch (error) {
     res.status(500).json({ message: 'Error exporting poll data', error: error.message });
+  }
+});
+
+// PUT /api/poll/edit-issue - Edit an existing issue name (Protected)
+router.put('/edit-issue', protect, async (req, res) => {
+  try {
+    const { oldName, newName } = req.body;
+    
+    if (!oldName || !newName) {
+      return res.status(400).json({ message: 'Both oldName and newName are required' });
+    }
+    
+    const trimmedOldName = oldName.trim();
+    const trimmedNewName = newName.trim();
+    
+    if (!trimmedOldName || !trimmedNewName) {
+      return res.status(400).json({ message: 'Issue names cannot be empty' });
+    }
+    
+    // Check if old name exists
+    if (!VALID_ISSUES.includes(trimmedOldName)) {
+      return res.status(404).json({ message: 'Original issue not found' });
+    }
+    
+    // Check if new name already exists (and is different)
+    if (VALID_ISSUES.includes(trimmedNewName) && trimmedOldName !== trimmedNewName) {
+      return res.status(400).json({ message: 'An issue with that name already exists' });
+    }
+    
+    // Update in-memory arrays
+    const validIndex = VALID_ISSUES.indexOf(trimmedOldName);
+    if (validIndex !== -1) {
+      VALID_ISSUES[validIndex] = trimmedNewName;
+    }
+    
+    const activeIndex = ACTIVE_ISSUES.indexOf(trimmedOldName);
+    if (activeIndex !== -1) {
+      ACTIVE_ISSUES[activeIndex] = trimmedNewName;
+    }
+    
+    // Save to database
+    await savePollConfig();
+    
+    // Update historical data in PollAnalytics
+    // issueCounts is a plain object (Mixed type), not a Map
+    const analyticsRecords = await PollAnalytics.find({});
+    let analyticsUpdatedCount = 0;
+    
+    for (const record of analyticsRecords) {
+      if (record.issueCounts && record.issueCounts[trimmedOldName] !== undefined) {
+        const count = record.issueCounts[trimmedOldName];
+        delete record.issueCounts[trimmedOldName];
+        record.issueCounts[trimmedNewName] = count;
+        record.markModified('issueCounts'); // Required for Mixed type fields
+        await record.save();
+        analyticsUpdatedCount++;
+      }
+    }
+    
+    // Update current week votes in PollVote
+    const currentVotes = await PollVote.find({
+      selectedIssues: trimmedOldName
+    });
+    
+    for (const vote of currentVotes) {
+      const issueIndex = vote.selectedIssues.indexOf(trimmedOldName);
+      if (issueIndex !== -1) {
+        vote.selectedIssues[issueIndex] = trimmedNewName;
+        await vote.save();
+      }
+    }
+    
+    res.status(200).json({ 
+      message: 'Issue updated successfully',
+      oldName: trimmedOldName,
+      newName: trimmedNewName,
+      analyticsUpdated: analyticsUpdatedCount,
+      votesUpdated: currentVotes.length
+    });
+    
+  } catch (error) {
+    console.error('Error editing issue:', error);
+    res.status(500).json({ message: 'Error editing issue', error: error.message });
+  }
+});
+
+// DELETE /api/poll/delete-issue - Delete an issue (Protected)
+router.delete('/delete-issue', protect, async (req, res) => {
+  try {
+    const { issueName } = req.body;
+    
+    if (!issueName) {
+      return res.status(400).json({ message: 'Issue name is required' });
+    }
+    
+    const trimmedName = issueName.trim();
+    
+    if (!VALID_ISSUES.includes(trimmedName)) {
+      return res.status(404).json({ message: 'Issue not found' });
+    }
+    
+    // Remove from in-memory arrays
+    VALID_ISSUES = VALID_ISSUES.filter(issue => issue !== trimmedName);
+    ACTIVE_ISSUES = ACTIVE_ISSUES.filter(issue => issue !== trimmedName);
+    
+    // Save to database
+    await savePollConfig();
+    
+    // Note: We intentionally do NOT delete historical data from PollAnalytics or PollVote
+    // The data remains for historical record, but the issue won't appear in new polls
+    
+    res.status(200).json({ 
+      message: 'Issue deleted successfully',
+      deletedIssue: trimmedName,
+      note: 'Historical voting data for this issue has been preserved in the database'
+    });
+    
+  } catch (error) {
+    console.error('Error deleting issue:', error);
+    res.status(500).json({ message: 'Error deleting issue', error: error.message });
   }
 });
 
