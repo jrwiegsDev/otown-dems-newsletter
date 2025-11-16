@@ -11,6 +11,7 @@ import {
   useColorMode,
 } from '@chakra-ui/react';
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
+import ChangePasswordButton from '../ChangePasswordButton';
 
 const DashboardLayout = ({ currentView, onViewChange, children }) => {
   const { user, logout } = useAuth();
@@ -30,6 +31,8 @@ const DashboardLayout = ({ currentView, onViewChange, children }) => {
         return 'Calendar Dashboard';
       case 'analytics':
         return 'Analytics Dashboard';
+      case 'staff':
+        return 'Staff Management';
       default:
         return 'Dashboard';
     }
@@ -63,6 +66,16 @@ const DashboardLayout = ({ currentView, onViewChange, children }) => {
           >
             Analytics
           </Button>
+          {user?.role === 'superadmin' && (
+            <Button 
+              onClick={() => onViewChange('staff')}
+              colorScheme={currentView === 'staff' ? 'purple' : 'gray'}
+              variant={currentView === 'staff' ? 'solid' : 'outline'}
+            >
+              Staff
+            </Button>
+          )}
+          <ChangePasswordButton user={user} />
           <IconButton
             onClick={toggleColorMode}
             icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}

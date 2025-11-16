@@ -8,15 +8,20 @@ import {
   FormControl,
   FormLabel,
   Heading,
+  IconButton,
   Input,
+  InputGroup,
+  InputRightElement,
   VStack,
   useToast,
 } from '@chakra-ui/react';
+import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import authService from '../services/authService';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth(); // <-- Get the login function from context
   const navigate = useNavigate(); // <-- Hook for redirection
   const toast = useToast();
@@ -66,12 +71,23 @@ const LoginPage = () => {
             </FormControl>
             <FormControl isRequired>
               <FormLabel>Password</FormLabel>
-              <Input
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <InputGroup>
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <InputRightElement>
+                  <IconButton
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
+                    onClick={() => setShowPassword(!showPassword)}
+                    variant="ghost"
+                    size="sm"
+                  />
+                </InputRightElement>
+              </InputGroup>
             </FormControl>
             <Button type="submit" colorScheme="blue" width="full" mt={4}>
               Login
