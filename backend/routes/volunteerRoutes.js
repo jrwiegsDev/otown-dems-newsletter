@@ -6,6 +6,12 @@ const validator = require('validator');
 const nodemailer = require('nodemailer');
 const Volunteer = require('../models/volunteerModel');
 const { protect } = require('../middleware/authMiddleware');
+const { 
+  publicFormLimiter, 
+  validateHoneypot, 
+  validateSubmissionTiming, 
+  sanitizeRequestBody 
+} = require('../middleware/spamProtection');
 
 // Transporter configured for MailerSend (same as newsletter)
 const transporter = nodemailer.createTransport({
@@ -32,7 +38,8 @@ router.get('/', protect, async (req, res) => {
 
 // @desc   Add a new volunteer (or update existing one)
 // @route  POST /api/volunteers
-router.post('/', async (req, res) => {
+// @access Public
+router.post('/', publicFormLimiter, sanitizeRequestBody, validateHoneypot, validateSubmissionTiming, async (req, res) => {
   try {
     const { firstName, lastName, email, interestedPrograms } = req.body;
 

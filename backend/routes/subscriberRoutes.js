@@ -5,6 +5,12 @@ const router = express.Router();
 const validator = require('validator');
 const Subscriber = require('../models/subscriberModel');
 const { protect } = require('../middleware/authMiddleware');
+const { 
+  publicFormLimiter, 
+  validateHoneypot, 
+  validateSubmissionTiming, 
+  sanitizeRequestBody 
+} = require('../middleware/spamProtection');
 
 // @desc   Get all subscribers
 // @route  GET /api/subscribers
@@ -19,7 +25,8 @@ router.get('/', protect, async (req, res) => {
 
 // @desc   Add a new subscriber (or update existing one)
 // @route  POST /api/subscribers
-router.post('/', async (req, res) => {
+// @access Public
+router.post('/', publicFormLimiter, sanitizeRequestBody, validateHoneypot, validateSubmissionTiming, async (req, res) => {
   try {
     const { firstName, lastName, email } = req.body;
 

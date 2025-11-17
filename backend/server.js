@@ -121,18 +121,24 @@ wss.on('connection', (ws) => {
 });
 
 // --- 8. Connect to MongoDB and start the HTTP server (instead of app.listen) ---
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('Successfully connected to MongoDB');
-    
-    // Start the poll scheduler
-    startPollScheduler();
-    
-    // Start the HTTP server, which now also handles WebSocket connections
-    server.listen(PORT, () => {
-      console.log(`Server (HTTP & WS) is running on port ${PORT}`);
+// Export app for testing
+module.exports = app;
+
+// Only start server if this file is run directly
+if (require.main === module) {
+  mongoose.connect(process.env.MONGO_URI)
+    .then(() => {
+      console.log('Successfully connected to MongoDB');
+      
+      // Start the poll scheduler
+      startPollScheduler();
+      
+      // Start the HTTP server, which now also handles WebSocket connections
+      server.listen(PORT, () => {
+        console.log(`Server (HTTP & WS) is running on port ${PORT}`);
+      });
+    })
+    .catch((error) => {
+      console.log('Error connecting to MongoDB:', error.message);
     });
-  })
-  .catch((error) => {
-    console.log('Error connecting to MongoDB:', error.message);
-  });
+}
