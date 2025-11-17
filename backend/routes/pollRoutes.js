@@ -118,8 +118,10 @@ async function savePollConfig() {
   }
 }
 
-// Initialize on module load
-loadPollConfig();
+// Initialize on module load (skip in test environment)
+if (process.env.NODE_ENV !== 'test') {
+  loadPollConfig();
+}
 
 // @desc   Check if email has already voted this week
 // @route  POST /api/poll/check-email
