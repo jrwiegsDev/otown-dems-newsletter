@@ -8,6 +8,12 @@ const PollVote = require('../models/pollVoteModel');
 const PollAnalytics = require('../models/pollAnalyticsModel');
 const PollConfig = require('../models/pollConfigModel');
 const { protect } = require('../middleware/authMiddleware');
+const { 
+  publicFormLimiter, 
+  validateHoneypot, 
+  validateSubmissionTiming, 
+  sanitizeRequestBody 
+} = require('../middleware/spamProtection');
 
 // Helper function to get current week identifier (ISO week)
 // ISO 8601: Week starts on Monday, Week 1 contains Jan 4th
@@ -148,7 +154,7 @@ router.post('/check-email', async (req, res) => {
 // @desc   Submit or update vote
 // @route  POST /api/poll/vote
 // @access Public
-router.post('/vote', async (req, res) => {
+router.post('/vote', publicFormLimiter, sanitizeRequestBody, validateHoneypot, validateSubmissionTiming, async (req, res) => {
   try {
     const { email, selectedIssues } = req.body;
 

@@ -1,0 +1,55 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+
+    - name: Install dependencies
+      working-directory: ./backend
+      run: npm ci
+
+    - name: Run tests
+      working-directory: ./backend
+      run: npm test
+      env:
+        NODE_ENV: test
+        MONGODB_URI: mongodb://fake-test-db:27017/test
+        JWT_SECRET: test-jwt-secret-key-for-ci
+        EMAIL_HOST: smtp.test.com
+        EMAIL_PORT: 587
+        EMAIL_USER: test@example.com
+        EMAIL_PASS: fake-password
+        COMMS_EMAIL_HOST: smtp.test.com
+        COMMS_EMAIL_PORT: 587
+        COMMS_EMAIL_USER: comms@example.com
+        COMMS_EMAIL_PASS: fake-comms-password
+        FRONTEND_URL: http://localhost:3000
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.node-version }}
+        path: backend/coverage/
+        retention-days: 30
