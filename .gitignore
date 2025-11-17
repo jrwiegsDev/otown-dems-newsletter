@@ -8,3 +8,5 @@
 
 # Build folder from React
 /frontend/buildbackend/pollvotes_export.json
+
+.DS_Store
