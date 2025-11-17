@@ -423,12 +423,15 @@ router.post('/reset-week', protect, async (req, res) => {
         });
       });
       
-      // Calculate week ending date (Sunday of current week)
-      const now = new Date();
-      const dayOfWeek = now.getDay();
-      const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-      const weekEnding = new Date(now);
-      weekEnding.setDate(now.getDate() + daysUntilSunday);
+      // Calculate the Sunday that ENDED this week (not the upcoming Sunday)
+      // Extract week number from identifier (e.g., "2025-W46" -> 46)
+      const weekNumber = parseInt(weekIdentifier.split('-W')[1]);
+      const year = parseInt(weekIdentifier.split('-W')[0]);
+      
+      // Calculate the date of Sunday for that week
+      const jan1 = new Date(year, 0, 1);
+      const daysToAdd = (weekNumber - 1) * 7 + (7 - jan1.getDay());
+      const weekEnding = new Date(year, 0, daysToAdd);
       weekEnding.setHours(23, 59, 59, 999);
       
       // Check if analytics already exist for this week
@@ -441,6 +444,7 @@ router.post('/reset-week', protect, async (req, res) => {
         // Update existing analytics
         existingAnalytics.totalVotes = currentVotes.length;
         existingAnalytics.issueCounts = issueCountsObject;
+        existingAnalytics.weekEnding = weekEnding; // Update the weekEnding date
         await existingAnalytics.save();
       } else {
         // Create new analytics entry
