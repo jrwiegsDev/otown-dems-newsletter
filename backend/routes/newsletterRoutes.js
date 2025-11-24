@@ -48,29 +48,52 @@ router.post('/send', protect, async (req, res) => {
     res.status(200).json({ message: `Newsletter sending initiated to ${recipientEmails.length} recipients!` });
 
     // --- SEND EMAILS IN THE BACKGROUND ---
-    console.log(`Starting background email send process for ${recipientEmails.length} emails...`);
-    for (const recipient of recipientEmails) {
-      const mailOptions = {
-        from: '"O\'Fallon Area Democratic Club" <newsletter@ofallonildems.org>',
-        replyTo: 'ofallondems@gmail.com',
-        to: recipient,
-        subject: subject,
-        html: htmlContent,
-      };
-
+    // Wrap the entire background process to prevent ANY crash
+    (async () => {
       try {
-        // Send email (no await, don't block the loop)
-        transporter.sendMail(mailOptions);
-        console.log(`Email queued for ${recipient}`);
+        console.log(`Starting background email send process for ${recipientEmails.length} emails...`);
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (let i = 0; i < recipientEmails.length; i++) {
+          const recipient = recipientEmails[i];
+          const mailOptions = {
+            from: '"O\'Fallon Area Democratic Club" <newsletter@ofallonildems.org>',
+            replyTo: 'ofallondems@gmail.com',
+            to: recipient,
+            subject: subject,
+            html: htmlContent,
+          };
 
-        // Wait for 5 seconds before queuing the next email
-        await delay(5000);
-      } catch (emailError) {
-        // Log errors for individual email sends but continue the loop
-        console.error(`Failed to send email to ${recipient}:`, emailError);
+          try {
+            // PROPERLY AWAIT the email send
+            await transporter.sendMail(mailOptions);
+            successCount++;
+            console.log(`✅ [${i + 1}/${recipientEmails.length}] Email sent to ${recipient}`);
+          } catch (emailError) {
+            failCount++;
+            // Log the error but CONTINUE sending to everyone else
+            console.error(`❌ [${i + 1}/${recipientEmails.length}] Failed to send to ${recipient}:`, emailError.message);
+            
+            // If it's a rate limit error, add extra delay before continuing
+            if (emailError.responseCode === 450 || emailError.message?.includes('Too many requests')) {
+              console.log('⏸️  Rate limit detected, waiting 30 seconds before continuing...');
+              await delay(30000);
+            }
+          }
+
+          // Wait for 5 seconds before sending the next email (unless it's the last one)
+          if (i < recipientEmails.length - 1) {
+            await delay(5000);
+          }
+        }
+        console.log(`✅ Finished sending emails. Success: ${successCount}, Failed: ${failCount}`);
+      } catch (fatalError) {
+        // This catches ANY unexpected error in the background process
+        console.error('🚨 FATAL ERROR in background email process:', fatalError);
+        console.error('Newsletter sending stopped unexpectedly. Check logs above for last successful email.');
       }
-    }
-    console.log('Finished queuing all emails.');
+    })();
 
   } catch (error) {
     // Catch errors during subscriber fetch or initial setup
