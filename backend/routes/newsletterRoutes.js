@@ -75,9 +75,18 @@ router.post('/send', protect, async (req, res) => {
             // Log the error but CONTINUE sending to everyone else
             console.error(`❌ [${i + 1}/${recipientEmails.length}] Failed to send to ${recipient}:`, emailError.message);
             
-            // If it's a rate limit error, add extra delay before continuing
-            if (emailError.responseCode === 450 || emailError.message?.includes('Too many requests')) {
-              console.log('⏸️  Rate limit detected, waiting 30 seconds before continuing...');
+            // Check for any temporary/rate limit errors that should trigger a delay
+            const isTemporaryError = 
+              emailError.responseCode === 450 || // Requested action not taken (temp)
+              emailError.responseCode === 451 || // Requested action aborted (temp)
+              emailError.responseCode === 452 || // Insufficient storage (temp)
+              emailError.responseCode === 421 || // Service not available (temp)
+              emailError.message?.toLowerCase().includes('too many requests') ||
+              emailError.message?.toLowerCase().includes('rate limit') ||
+              emailError.message?.toLowerCase().includes('throttl');
+            
+            if (isTemporaryError) {
+              console.log('⏸️  Temporary/rate limit error detected, waiting 30 seconds before continuing...');
               await delay(30000);
             }
           }
