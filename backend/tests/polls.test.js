@@ -6,6 +6,15 @@ const PollAnalytics = require('../models/pollAnalyticsModel');
 const PollConfig = require('../models/pollConfigModel');
 const User = require('../models/userModel');
 
+// Helper to get current ISO week identifier dynamically
+const getCurrentWeekIdentifier = () => {
+  const now = new Date();
+  const startOfYear = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+  const days = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));
+  const weekNumber = Math.ceil((days + startOfYear.getUTCDay() + 1) / 7);
+  return `${now.getUTCFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
+};
+
 jest.mock('../models/pollVoteModel');
 jest.mock('../models/pollAnalyticsModel');
 jest.mock('../models/pollConfigModel');
@@ -166,26 +175,27 @@ describe('POST /api/poll/reset-week (Emergency Reset)', () => {
   });
 
   test('archives current week votes and resets poll', async () => {
+    const currentWeek = getCurrentWeekIdentifier();
     const mockVotes = [
       {
         _id: 'vote1',
         emailHash: 'hash1',
         selectedIssues: ['Government Corruption', 'The Economy'],
-        weekIdentifier: '2025-W47',
+        weekIdentifier: currentWeek,
         votedAt: new Date()
       },
       {
         _id: 'vote2',
         emailHash: 'hash2',
         selectedIssues: ['Climate Change', 'The Economy'],
-        weekIdentifier: '2025-W47',
+        weekIdentifier: currentWeek,
         votedAt: new Date()
       },
       {
         _id: 'vote3',
         emailHash: 'hash3',
         selectedIssues: ['Government Corruption'],
-        weekIdentifier: '2025-W47',
+        weekIdentifier: currentWeek,
         votedAt: new Date()
       }
     ];
@@ -193,7 +203,7 @@ describe('POST /api/poll/reset-week (Emergency Reset)', () => {
     PollVote.find = jest.fn().mockResolvedValue(mockVotes);
     PollAnalytics.findOne = jest.fn().mockResolvedValue(null);
     PollAnalytics.create = jest.fn().mockResolvedValue({
-      weekIdentifier: '2025-W47',
+      weekIdentifier: currentWeek,
       totalVotes: 3,
       issueCounts: {
         'Government Corruption': 2,
@@ -212,25 +222,26 @@ describe('POST /api/poll/reset-week (Emergency Reset)', () => {
     expect(res.body.votesDeleted).toBe(3);
     expect(res.body.archived).toBe(true);
     expect(PollAnalytics.create).toHaveBeenCalled();
-    expect(PollVote.deleteMany).toHaveBeenCalledWith({ weekIdentifier: '2025-W47' });
+    expect(PollVote.deleteMany).toHaveBeenCalledWith({ weekIdentifier: currentWeek });
   });
 
   test('updates existing analytics if week already archived', async () => {
+    const currentWeek = getCurrentWeekIdentifier();
     const mockVotes = [
       {
         _id: 'vote1',
         emailHash: 'hash1',
         selectedIssues: ['Government Corruption'],
-        weekIdentifier: '2025-W47',
+        weekIdentifier: currentWeek,
         votedAt: new Date()
       }
     ];
 
     const existingAnalytics = {
-      weekIdentifier: '2025-W47',
+      weekIdentifier: currentWeek,
       totalVotes: 2,
       issueCounts: { 'Government Corruption': 1, 'Climate Change': 1 },
-      weekEnding: new Date('2025-11-23'),
+      weekEnding: new Date(),
       save: jest.fn().mockResolvedValue(true)
     };
 
