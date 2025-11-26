@@ -71,20 +71,23 @@ async function archiveAndResetPoll() {
   try {
     console.log('🗳️  Starting weekly poll reset and archival...');
 
-    const now = new Date();
-    
+    // Use America/Chicago timezone for safety checks so server timezone
+    // differences (UTC, etc.) don't prevent the cron-triggered job from running.
+    const nowUTC = new Date();
+    const chicagoTime = new Date(nowUTC.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+
     // Safety check: Only allow reset on Sunday or Monday at specific times
-    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday
-    const hour = now.getHours();
-    
+    const dayOfWeek = chicagoTime.getDay(); // 0 = Sunday, 1 = Monday
+    const hour = chicagoTime.getHours();
+
     // Only run if it's Sunday night (23:00-23:59) or Monday early morning (00:00-01:00)
     const isSundayNight = dayOfWeek === 0 && hour === 23;
     const isMondayMorning = dayOfWeek === 1 && hour <= 1;
-    
+
     if (!isSundayNight && !isMondayMorning) {
-      console.log(`⚠️  Reset attempted at wrong time: ${now.toLocaleString()}`);
+      console.log(`⚠️  Reset attempted at wrong time (Chicago): ${chicagoTime.toLocaleString()}`);
       console.log(`   Day: ${dayOfWeek}, Hour: ${hour}`);
-      console.log(`   Resets only allowed Sunday 23:00-23:59 or Monday 00:00-01:00`);
+      console.log(`   Resets only allowed Sunday 23:00-23:59 or Monday 00:00-01:00 (Chicago)`);
       return;
     }
     

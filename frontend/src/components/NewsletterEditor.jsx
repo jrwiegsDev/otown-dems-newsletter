@@ -1,13 +1,34 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css'; // Import Quill styles
 import {
   Box,
   Button,
+  Checkbox,
+  Flex,
   FormControl,
   FormLabel,
+  Heading,
+  HStack,
+  IconButton,
   Input,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer,
+  Text,
   VStack,
+  useDisclosure,
   useToast,
   AlertDialog,
   AlertDialogBody,
@@ -15,21 +36,213 @@ import {
   AlertDialogHeader,
   AlertDialogContent,
   AlertDialogOverlay,
+  Badge,
+  Spinner,
 } from '@chakra-ui/react';
+import { DeleteIcon, EditIcon } from '@chakra-ui/icons';
 import { useAuth } from '../context/AuthContext';
 import newsletterService from '../services/newsletterService';
 
-const NewsletterEditor = () => {
+const NewsletterEditor = ({ selectedEmails = [], selectedCount = 0, totalSubscribers = 0 }) => {
   const { user } = useAuth();
   const toast = useToast();
   const [subject, setSubject] = useState('');
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Determine if we're sending to selected subscribers only
+  // Only true when some (but not all and not none) are selected
+  const isSendingToSelected = selectedCount > 0 && selectedCount < totalSubscribers;
+  
+  // Draft state
+  const [isDraft, setIsDraft] = useState(false);
+  const [drafts, setDrafts] = useState([]);
+  const [loadingDrafts, setLoadingDrafts] = useState(false);
+  const [currentDraftId, setCurrentDraftId] = useState(null); // Track if editing existing draft
+  const [draftToDelete, setDraftToDelete] = useState(null);
 
   // State for confirmation dialog
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const cancelRef = useRef();
   const onClose = () => setIsAlertOpen(false);
+  
+  // Drafts modal
+  const { isOpen: isDraftsModalOpen, onOpen: onDraftsModalOpen, onClose: onDraftsModalClose } = useDisclosure();
+  
+  // Delete draft confirmation
+  const [isDeleteDraftAlertOpen, setIsDeleteDraftAlertOpen] = useState(false);
+  const deleteDraftCancelRef = useRef();
+
+  // Fetch drafts when modal opens
+  const fetchDrafts = async () => {
+    setLoadingDrafts(true);
+    try {
+      const data = await newsletterService.getDrafts(user.token);
+      setDrafts(data);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch drafts',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setLoadingDrafts(false);
+    }
+  };
+
+  // Fetch drafts count on mount
+  useEffect(() => {
+    const fetchDraftsCount = async () => {
+      try {
+        const data = await newsletterService.getDrafts(user.token);
+        setDrafts(data);
+      } catch (error) {
+        // Silently fail on initial load
+        console.error('Failed to fetch drafts count:', error);
+      }
+    };
+    fetchDraftsCount();
+  }, [user.token]);
+
+  const handleOpenDraftsModal = () => {
+    fetchDrafts();
+    onDraftsModalOpen();
+  };
+
+  // Load a draft into the editor
+  const handleLoadDraft = async (draftId) => {
+    try {
+      const draft = await newsletterService.getDraft(draftId, user.token);
+      setSubject(draft.subject);
+      setContent(draft.htmlContent);
+      setCurrentDraftId(draft._id);
+      setIsDraft(true); // Set as draft mode
+      onDraftsModalClose();
+      toast({
+        title: 'Draft Loaded',
+        description: 'Draft loaded into editor. Uncheck "Draft?" to send.',
+        status: 'info',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load draft',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  // Save or update draft
+  const handleSaveDraft = async () => {
+    if (!subject || !content) {
+      toast({
+        title: 'Error',
+        description: 'Subject and content are required',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (currentDraftId) {
+        // Update existing draft
+        await newsletterService.updateDraft(currentDraftId, { subject, htmlContent: content }, user.token);
+        toast({
+          title: 'Draft Updated',
+          description: 'Your draft has been updated.',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        // Create new draft
+        await newsletterService.createDraft({ subject, htmlContent: content }, user.token);
+        toast({
+          title: 'Draft Saved',
+          description: 'Your draft has been saved.',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+      // Reset the editor
+      setSubject('');
+      setContent('');
+      setIsDraft(false);
+      setCurrentDraftId(null);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to save draft',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Delete a draft
+  const handleDeleteDraft = async () => {
+    if (!draftToDelete) return;
+    
+    try {
+      await newsletterService.deleteDraft(draftToDelete._id, user.token);
+      toast({
+        title: 'Draft Deleted',
+        description: 'The draft has been deleted.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      // If we deleted the currently loaded draft, reset the editor
+      if (currentDraftId === draftToDelete._id) {
+        setSubject('');
+        setContent('');
+        setIsDraft(false);
+        setCurrentDraftId(null);
+      }
+      // Refresh the drafts list
+      fetchDrafts();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete draft',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsDeleteDraftAlertOpen(false);
+      setDraftToDelete(null);
+    }
+  };
+
+  const openDeleteDraftAlert = (draft) => {
+    setDraftToDelete(draft);
+    setIsDeleteDraftAlertOpen(true);
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
 
   // --- Define the COMPREHENSIVE toolbar configuration ---
   const modules = {
@@ -66,19 +279,29 @@ const NewsletterEditor = () => {
     setIsLoading(true);
     onClose();
     try {
-      const response = await newsletterService.sendNewsletter(
-        { subject, htmlContent: content },
-        user.token
-      );
+      // If sending to selected subscribers, include their emails
+      const payload = {
+        subject,
+        htmlContent: content,
+      };
+      
+      // Only include selectedEmails if we're sending to a subset
+      if (isSendingToSelected) {
+        payload.selectedEmails = selectedEmails;
+      }
+      
+      const response = await newsletterService.sendNewsletter(payload, user.token);
       toast({
         title: 'Success!',
-        description: response.message || "Newsletter sending initiated! You can close this window.",
+        description: response.message || "Newsletter sending initiated!",
         status: 'success',
         duration: 5000,
         isClosable: true,
       });
       setSubject('');
       setContent('');
+      setIsDraft(false);
+      setCurrentDraftId(null);
     } catch (error) {
       toast({
         title: 'Error',
@@ -95,7 +318,31 @@ const NewsletterEditor = () => {
   return (
     <>
       <VStack spacing={4} align="stretch" h="100%">
-        <FormControl isRequired>
+        {/* Header row with Draft checkbox and Drafts button */}
+        <Flex justifyContent="space-between" alignItems="center">
+          <HStack spacing={3}>
+            <Checkbox 
+              isChecked={isDraft} 
+              onChange={(e) => setIsDraft(e.target.checked)}
+              colorScheme="blue"
+            >
+              Draft?
+            </Checkbox>
+            {currentDraftId && (
+              <Badge colorScheme="blue" fontSize="sm">Editing Draft</Badge>
+            )}
+          </HStack>
+          <Button
+            size="sm"
+            colorScheme="blue"
+            variant="outline"
+            onClick={handleOpenDraftsModal}
+          >
+            📁 Drafts ({drafts.length})
+          </Button>
+        </Flex>
+
+        <FormControl isRequired flexShrink={0}>
           <FormLabel>Subject</FormLabel>
           <Input
             placeholder="Newsletter Subject"
@@ -104,28 +351,73 @@ const NewsletterEditor = () => {
           />
         </FormControl>
 
-        <Box flex="1" h="100%" overflow="hidden"> {/* Added overflow hidden */}
+        <Box flex="1" minH="300px" display="flex" flexDirection="column">
           <ReactQuill
             theme="snow"
             value={content}
             onChange={setContent}
-            modules={modules} // <-- Pass updated modules
-            formats={formats} // <-- Pass updated formats
-            style={{ height: 'calc(100% - 42px)' }}
+            modules={modules}
+            formats={formats}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
           />
         </Box>
 
-        <Button
-          colorScheme="green"
-          onClick={() => setIsAlertOpen(true)}
-          isLoading={isLoading}
-          isDisabled={!subject || !content}
-        >
-          Send Newsletter
-        </Button>
+        {isDraft ? (
+          <HStack spacing={3}>
+            <Button
+              colorScheme="blue"
+              onClick={handleSaveDraft}
+              isLoading={isLoading}
+              isDisabled={!subject || !content}
+              flex="1"
+            >
+              {currentDraftId ? 'Update Draft' : 'Save Draft Newsletter'}
+            </Button>
+            <Button
+              variant="outline"
+              colorScheme="gray"
+              onClick={() => {
+                setSubject('');
+                setContent('');
+                setIsDraft(false);
+                setCurrentDraftId(null);
+              }}
+              isDisabled={!subject && !content}
+            >
+              Clear
+            </Button>
+          </HStack>
+        ) : (
+          <HStack spacing={3}>
+            <Button
+              colorScheme={isSendingToSelected ? "orange" : "green"}
+              onClick={() => setIsAlertOpen(true)}
+              isLoading={isLoading}
+              isDisabled={!subject || !content}
+              flex="1"
+            >
+              {isSendingToSelected 
+                ? `Email ${selectedCount} Selected Subscriber${selectedCount !== 1 ? 's' : ''}`
+                : 'Send Newsletter'
+              }
+            </Button>
+            <Button
+              variant="outline"
+              colorScheme="gray"
+              onClick={() => {
+                setSubject('');
+                setContent('');
+                setCurrentDraftId(null);
+              }}
+              isDisabled={!subject && !content}
+            >
+              Clear
+            </Button>
+          </HStack>
+        )}
       </VStack>
 
-      {/* Confirmation Dialog */}
+      {/* Send Newsletter Confirmation Dialog */}
       <AlertDialog
         isOpen={isAlertOpen}
         leastDestructiveRef={cancelRef}
@@ -134,17 +426,123 @@ const NewsletterEditor = () => {
         <AlertDialogOverlay>
           <AlertDialogContent>
             <AlertDialogHeader fontSize="lg" fontWeight="bold">
-              Send Newsletter
+              {isSendingToSelected ? 'Email Selected Subscribers' : 'Send Newsletter'}
             </AlertDialogHeader>
             <AlertDialogBody>
-              Are you sure you want to send this newsletter to all subscribers?
+              {isSendingToSelected 
+                ? `Are you sure you want to send this email to ${selectedCount} selected subscriber${selectedCount !== 1 ? 's' : ''}?`
+                : 'Are you sure you want to send this newsletter to all subscribers?'
+              }
             </AlertDialogBody>
             <AlertDialogFooter>
               <Button ref={cancelRef} onClick={onClose}>
                 Cancel
               </Button>
-              <Button colorScheme="green" onClick={handleSendConfirm} ml={3} isLoading={isLoading}>
+              <Button 
+                colorScheme={isSendingToSelected ? "orange" : "green"} 
+                onClick={handleSendConfirm} 
+                ml={3} 
+                isLoading={isLoading}
+              >
                 Confirm & Send
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
+
+      {/* Drafts Modal */}
+      <Modal isOpen={isDraftsModalOpen} onClose={onDraftsModalClose} size="xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Newsletter Drafts</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {loadingDrafts ? (
+              <Flex justify="center" py={8}>
+                <Spinner size="lg" />
+              </Flex>
+            ) : drafts.length === 0 ? (
+              <Text color="gray.500" textAlign="center" py={8}>
+                No drafts saved yet. Check "Draft?" and save a newsletter to create one.
+              </Text>
+            ) : (
+              <TableContainer>
+                <Table variant="simple" size="sm">
+                  <Thead>
+                    <Tr>
+                      <Th>Subject</Th>
+                      <Th>Created By</Th>
+                      <Th>Last Updated</Th>
+                      <Th>Actions</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {drafts.map((draft) => (
+                      <Tr 
+                        key={draft._id} 
+                        _hover={{ bg: 'gray.700', cursor: 'pointer' }}
+                        onClick={() => handleLoadDraft(draft._id)}
+                      >
+                        <Td maxW="200px" isTruncated>{draft.subject}</Td>
+                        <Td>{draft.createdByName}</Td>
+                        <Td fontSize="sm">{formatDate(draft.updatedAt)}</Td>
+                        <Td onClick={(e) => e.stopPropagation()}>
+                          <HStack spacing={2}>
+                            <IconButton
+                              icon={<EditIcon />}
+                              size="sm"
+                              colorScheme="yellow"
+                              aria-label="Edit draft"
+                              onClick={() => handleLoadDraft(draft._id)}
+                            />
+                            <IconButton
+                              icon={<DeleteIcon />}
+                              size="sm"
+                              colorScheme="red"
+                              aria-label="Delete draft"
+                              onClick={() => openDeleteDraftAlert(draft)}
+                            />
+                          </HStack>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </TableContainer>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Text fontSize="sm" color="gray.500" mr="auto">
+              {drafts.length}/10 drafts used
+            </Text>
+            <Button variant="ghost" onClick={onDraftsModalClose}>
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Delete Draft Confirmation */}
+      <AlertDialog
+        isOpen={isDeleteDraftAlertOpen}
+        leastDestructiveRef={deleteDraftCancelRef}
+        onClose={() => setIsDeleteDraftAlertOpen(false)}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Delete Draft
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              Are you sure you want to delete the draft "{draftToDelete?.subject}"? This cannot be undone.
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button ref={deleteDraftCancelRef} onClick={() => setIsDeleteDraftAlertOpen(false)}>
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={handleDeleteDraft} ml={3}>
+                Delete
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
