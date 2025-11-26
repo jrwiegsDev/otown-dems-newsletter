@@ -2,8 +2,10 @@ import { useState, useRef } from 'react';
 import {
   Box,
   Button,
+  Checkbox,
   Flex,
   Heading,
+  HStack,
   IconButton,
   Text,
   Grid,
@@ -56,6 +58,44 @@ const NewsletterDashboard = ({
   const { isOpen: isEditModalOpen, onOpen: onEditModalOpen, onClose: onEditModalClose } = useDisclosure();
   const [subscriberToEdit, setSubscriberToEdit] = useState(null);
   const [editFormData, setEditFormData] = useState({ firstName: '', lastName: '', email: '' });
+  
+  // Selected subscribers for targeted emails
+  const [selectedSubscriberIds, setSelectedSubscriberIds] = useState(new Set());
+
+  // Check if all subscribers are selected
+  const allSelected = subscribers.length > 0 && selectedSubscriberIds.size === subscribers.length;
+  // Check if some (but not all) are selected
+  const someSelected = selectedSubscriberIds.size > 0 && selectedSubscriberIds.size < subscribers.length;
+
+  // Toggle individual subscriber selection
+  const toggleSubscriber = (subscriberId) => {
+    setSelectedSubscriberIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(subscriberId)) {
+        newSet.delete(subscriberId);
+      } else {
+        newSet.add(subscriberId);
+      }
+      return newSet;
+    });
+  };
+
+  // Select all subscribers
+  const selectAll = () => {
+    setSelectedSubscriberIds(new Set(subscribers.map(s => s._id)));
+  };
+
+  // Deselect all subscribers
+  const deselectAll = () => {
+    setSelectedSubscriberIds(new Set());
+  };
+
+  // Get emails of selected subscribers
+  const getSelectedEmails = () => {
+    return subscribers
+      .filter(s => selectedSubscriberIds.has(s._id))
+      .map(s => s.email);
+  };
 
   const openDeleteAlert = (subscriber) => {
     setSubscriberToDelete(subscriber);
@@ -135,7 +175,11 @@ const NewsletterDashboard = ({
           <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column" minH="0">
             <Heading fontSize="xl" mb={4} flexShrink={0}>Compose Newsletter</Heading>
             <Box flex="1" minH="0">
-              <NewsletterEditor />
+              <NewsletterEditor 
+                selectedEmails={getSelectedEmails()}
+                selectedCount={selectedSubscriberIds.size}
+                totalSubscribers={subscribers.length}
+              />
             </Box>
           </Box>
         </GridItem>
@@ -182,45 +226,76 @@ const NewsletterDashboard = ({
                 <Spinner />
               </Flex>
             ) : (
-              <TableContainer mt={4} flex="1" overflowY="auto" minH="0">
-                <Table variant="simple">
-                  <Thead>
-                    <Tr>
-                      <Th>First Name</Th>
-                      <Th>Last Name</Th>
-                      <Th>Email</Th>
-                      <Th>Actions</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {filteredSubscribers.map((subscriber) => (
-                      <Tr key={subscriber._id}>
-                        <Td>{subscriber.firstName}</Td>
-                        <Td>{subscriber.lastName}</Td>
-                        <Td>{subscriber.email}</Td>
-                        <Td>
-                          <Stack direction="row">
-                            <IconButton
-                              icon={<EditIcon />}
-                              colorScheme="yellow"
-                              aria-label="Edit subscriber"
-                              size="sm"
-                              onClick={() => openEditModal(subscriber)}
-                            />
-                            <IconButton
-                              icon={<DeleteIcon />}
-                              colorScheme="red"
-                              aria-label="Delete subscriber"
-                              size="sm"
-                              onClick={() => openDeleteAlert(subscriber)}
-                            />
-                          </Stack>
-                        </Td>
+              <>
+                {/* Select/Deselect controls */}
+                <Flex mt={4} mb={2} gap={2} alignItems="center" flexShrink={0}>
+                  <Button size="xs" colorScheme="blue" variant="outline" onClick={selectAll}>
+                    Select All
+                  </Button>
+                  <Button size="xs" colorScheme="gray" variant="outline" onClick={deselectAll}>
+                    Deselect All
+                  </Button>
+                  {selectedSubscriberIds.size > 0 && (
+                    <Text fontSize="sm" color="blue.400" fontWeight="semibold">
+                      {selectedSubscriberIds.size} selected
+                    </Text>
+                  )}
+                </Flex>
+                <TableContainer flex="1" overflowY="auto" minH="0">
+                  <Table variant="simple">
+                    <Thead>
+                      <Tr>
+                        <Th width="40px" px={2}>
+                          <Checkbox 
+                            isChecked={allSelected}
+                            isIndeterminate={someSelected}
+                            onChange={(e) => e.target.checked ? selectAll() : deselectAll()}
+                            colorScheme="blue"
+                          />
+                        </Th>
+                        <Th>First Name</Th>
+                        <Th>Last Name</Th>
+                        <Th>Email</Th>
+                        <Th>Actions</Th>
                       </Tr>
-                    ))}
-                  </Tbody>
-                </Table>
-              </TableContainer>
+                    </Thead>
+                    <Tbody>
+                      {filteredSubscribers.map((subscriber) => (
+                        <Tr key={subscriber._id}>
+                          <Td width="40px" px={2}>
+                            <Checkbox 
+                              isChecked={selectedSubscriberIds.has(subscriber._id)}
+                              onChange={() => toggleSubscriber(subscriber._id)}
+                              colorScheme="blue"
+                            />
+                          </Td>
+                          <Td>{subscriber.firstName}</Td>
+                          <Td>{subscriber.lastName}</Td>
+                          <Td>{subscriber.email}</Td>
+                          <Td>
+                            <Stack direction="row">
+                              <IconButton
+                                icon={<EditIcon />}
+                                colorScheme="yellow"
+                                aria-label="Edit subscriber"
+                                size="sm"
+                                onClick={() => openEditModal(subscriber)}
+                              />
+                              <IconButton
+                                icon={<DeleteIcon />}
+                                colorScheme="red"
+                                aria-label="Delete subscriber"
+                                size="sm"
+                                onClick={() => openDeleteAlert(subscriber)}
+                              />
+                            </Stack>
+                          </Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                </TableContainer>
+              </>
             )}
           </Box>
         </GridItem>
