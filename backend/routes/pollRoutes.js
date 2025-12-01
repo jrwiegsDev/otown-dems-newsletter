@@ -679,4 +679,118 @@ router.delete('/delete-issue', protect, async (req, res) => {
   }
 });
 
+// @desc   Archive the most recently completed week
+// @route  POST /api/poll/archive-completed-week
+// @access Private
+router.post('/archive-completed-week', protect, async (req, res) => {
+  try {
+    const currentWeekId = getCurrentWeekIdentifier();
+    
+    console.log('🗳️  Manual archive triggered for completed weeks...');
+    console.log(`📅 Current week: ${currentWeekId}`);
+
+    // Find all votes that are NOT from the current week
+    const allVotes = await PollVote.find({});
+    
+    console.log(`📊 Found ${allVotes.length} total votes in database`);
+    
+    // Group votes by week identifier (excluding current week)
+    const votesByWeek = new Map();
+    allVotes.forEach(vote => {
+      if (vote.weekIdentifier !== currentWeekId) {
+        if (!votesByWeek.has(vote.weekIdentifier)) {
+          votesByWeek.set(vote.weekIdentifier, []);
+        }
+        votesByWeek.get(vote.weekIdentifier).push(vote);
+      }
+    });
+
+    console.log(`📦 Found ${votesByWeek.size} completed week(s) to archive`);
+
+    if (votesByWeek.size === 0) {
+      return res.status(200).json({
+        message: 'No completed weeks to archive',
+        currentWeek: currentWeekId,
+        weeksArchived: 0
+      });
+    }
+
+    const archivedWeeks = [];
+
+    // Archive each completed week's votes
+    for (const [weekId, votes] of votesByWeek) {
+      if (votes.length === 0) continue;
+
+      console.log(`\n📊 Archiving week ${weekId} (${votes.length} votes)...`);
+
+      // Calculate issue counts
+      const issueCounts = {};
+      VALID_ISSUES.forEach(issue => {
+        issueCounts[issue] = 0;
+      });
+
+      votes.forEach(vote => {
+        vote.selectedIssues.forEach(issue => {
+          if (issueCounts[issue] !== undefined) {
+            issueCounts[issue]++;
+          }
+        });
+      });
+
+      // Calculate the Sunday that ended this week
+      const weekNumber = parseInt(weekId.split('-W')[1]);
+      const year = parseInt(weekId.split('-W')[0]);
+      
+      const jan1 = new Date(year, 0, 1);
+      const daysToAdd = (weekNumber - 1) * 7 + (7 - jan1.getDay());
+      const weekEnding = new Date(year, 0, daysToAdd);
+      weekEnding.setHours(23, 59, 59, 999);
+
+      // Check if analytics already exist for this week
+      const existingAnalytics = await PollAnalytics.findOne({ weekIdentifier: weekId });
+      
+      if (existingAnalytics) {
+        console.log(`⚠️  Analytics already exist for ${weekId}, updating...`);
+        existingAnalytics.totalVotes = votes.length;
+        existingAnalytics.issueCounts = issueCounts;
+        existingAnalytics.archivedAt = new Date();
+        await existingAnalytics.save();
+        archivedWeeks.push({ weekId, totalVotes: votes.length, updated: true });
+      } else {
+        // Save to analytics
+        await PollAnalytics.create({
+          weekIdentifier: weekId,
+          weekEnding: weekEnding,
+          totalVotes: votes.length,
+          issueCounts: issueCounts,
+          archivedAt: new Date()
+        });
+        archivedWeeks.push({ weekId, totalVotes: votes.length, created: true });
+      }
+
+      console.log(`✅ Archived ${votes.length} votes for week ${weekId}`);
+
+      // Delete the archived votes for this specific week
+      const deleteResult = await PollVote.deleteMany({ weekIdentifier: weekId });
+      console.log(`🗑️  Deleted ${deleteResult.deletedCount} vote records for week ${weekId}`);
+    }
+
+    console.log('\n✨ Manual archive completed successfully!');
+
+    res.status(200).json({
+      message: 'Completed weeks archived successfully',
+      currentWeek: currentWeekId,
+      weeksArchived: archivedWeeks.length,
+      archivedWeeks: archivedWeeks
+    });
+
+  } catch (error) {
+    console.error('❌ Error during manual archive:', error);
+    res.status(500).json({ 
+      message: 'Error archiving completed weeks', 
+      error: error.message 
+    });
+  }
+});
+
 module.exports = router;
