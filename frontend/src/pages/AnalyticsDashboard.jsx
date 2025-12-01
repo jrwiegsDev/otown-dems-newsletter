@@ -76,7 +76,10 @@ const AnalyticsDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [archiveResult, setArchiveResult] = useState(null);
   const [resetting, setResetting] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -213,6 +216,33 @@ const AnalyticsDashboard = () => {
       .filter(item => item.count > 0) // Only show issues with votes
       .sort((a, b) => b.count - a.count) // Sort by count descending
   } : null;
+
+  // Handle archive completed week
+  const handleArchiveCompletedWeek = async () => {
+    setArchiving(true);
+    setArchiveResult(null);
+    try {
+      const response = await api.post('/api/poll/archive-completed-week', {}, {
+        headers: {
+          Authorization: `Bearer ${user.token}`
+        }
+      });
+      
+      setArchiveResult(response.data);
+      setShowArchiveModal(true);
+      
+      // Refresh analytics data to show newly archived weeks
+      await fetchAnalyticsData();
+    } catch (err) {
+      setArchiveResult({
+        error: true,
+        message: err.response?.data?.message || err.message
+      });
+      setShowArchiveModal(true);
+    } finally {
+      setArchiving(false);
+    }
+  };
 
   // Handle emergency reset
   const handleResetWeek = async () => {
@@ -559,15 +589,25 @@ const AnalyticsDashboard = () => {
                   </Box>
                 )}
 
-                {/* Emergency Reset Button */}
-                <Button
-                  colorScheme="red"
-                  size="lg"
-                  width={{ base: "100%", md: "auto" }}
-                  onClick={() => setShowResetModal(true)}
-                >
-                  Emergency Reset Current Week
-                </Button>
+                {/* Action Buttons */}
+                <HStack spacing={4} flexWrap="wrap">
+                  <Button
+                    colorScheme="blue"
+                    size="lg"
+                    onClick={handleArchiveCompletedWeek}
+                    isLoading={archiving}
+                    loadingText="Archiving..."
+                  >
+                    Archive Completed Week
+                  </Button>
+                  <Button
+                    colorScheme="red"
+                    size="lg"
+                    onClick={() => setShowResetModal(true)}
+                  >
+                    Emergency Reset Current Week
+                  </Button>
+                </HStack>
               </Box>
 
               {/* Historical Trends Charts - Compact Grid */}
@@ -866,6 +906,7 @@ const AnalyticsDashboard = () => {
       </Tabs>
 
       {/* Reset Confirmation Modal */}
+      {/* Reset Confirmation Modal */}
       <Modal isOpen={showResetModal} onClose={() => setShowResetModal(false)} isCentered>
         <ModalOverlay />
         <ModalContent>
@@ -904,6 +945,66 @@ const AnalyticsDashboard = () => {
                 Cancel
               </Button>
             </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Archive Result Modal */}
+      <Modal isOpen={showArchiveModal} onClose={() => setShowArchiveModal(false)} isCentered size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>
+            {archiveResult?.error ? 'Archive Error' : 'Archive Complete'}
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {archiveResult?.error ? (
+              <VStack align="start" spacing={3}>
+                <Text color="red.500">
+                  Error archiving completed weeks: {archiveResult.message}
+                </Text>
+              </VStack>
+            ) : archiveResult?.weeksArchived > 0 ? (
+              <VStack align="start" spacing={4}>
+                <Text fontSize="lg" fontWeight="semibold" color="green.500">
+                  ✅ Archive successful!
+                </Text>
+                <Box>
+                  <Text fontWeight="semibold" mb={2}>
+                    Weeks archived: {archiveResult.weeksArchived}
+                  </Text>
+                  <VStack align="start" spacing={2} pl={4}>
+                    {archiveResult.archivedWeeks.map((week) => (
+                      <HStack key={week.weekId}>
+                        <Badge colorScheme="blue">{week.weekId}</Badge>
+                        <Text>
+                          {week.totalVotes} votes
+                          {week.updated && <Badge ml={2} colorScheme="yellow">Updated</Badge>}
+                          {week.created && <Badge ml={2} colorScheme="green">Created</Badge>}
+                        </Text>
+                      </HStack>
+                    ))}
+                  </VStack>
+                </Box>
+                <Text color="gray.600" fontSize="sm">
+                  The charts have been updated with the newly archived data.
+                </Text>
+              </VStack>
+            ) : (
+              <VStack align="start" spacing={3}>
+                <Text fontSize="lg">
+                  No completed weeks found to archive.
+                </Text>
+                <Text color="gray.600">
+                  The current week ({archiveResult?.currentWeek}) is still active and will be archived after it ends (Sunday night).
+                </Text>
+              </VStack>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="blue" onClick={() => setShowArchiveModal(false)}>
+              OK
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
