@@ -12,6 +12,9 @@ const archivedAnnouncementSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  image: {
+    type: String  // Base64 encoded image data (not archived to save space)
+  },
   originalCreatedAt: {
     type: Date,
     required: true

@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const Event = require('../models/eventModel');
-const ArchivedEvent = require('../models/archivedEventModel');
 const { protect } = require('../middleware/authMiddleware');
 
 // Get all events (Public)
@@ -41,11 +40,18 @@ router.post('/', protect, async (req, res) => {
       eventCoordinates,
       eventLink,
       eventLinkText,
+      eventImage,
       isBannerEvent
     } = req.body;
 
     if (!eventName || !eventDate) {
       return res.status(400).json({ message: 'Event name and date are required' });
+    }
+
+    // Validate image size if provided (2MB limit for Base64)
+    // Base64 increases size by ~33%, so 2MB file ≈ 2.67MB Base64
+    if (eventImage && eventImage.length > 2.67 * 1024 * 1024) {
+      return res.status(400).json({ message: 'Image size must be less than 2MB' });
     }
 
     const event = new Event({
@@ -60,6 +66,7 @@ router.post('/', protect, async (req, res) => {
       eventCoordinates,
       eventLink,
       eventLinkText,
+      eventImage,
       isBannerEvent,
     });
 
@@ -80,6 +87,12 @@ router.put('/:id', protect, async (req, res) => {
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
+
+    // Validate image size if provided (2MB limit for Base64)
+    if (req.body.eventImage && req.body.eventImage.length > 2.67 * 1024 * 1024) {
+      return res.status(400).json({ message: 'Image size must be less than 2MB' });
+    }
+
     const updatedEvent = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.json(updatedEvent);
   } catch (error) {
@@ -97,34 +110,10 @@ router.delete('/:id', protect, async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // Archive the event before deletion
-    const archivedEvent = new ArchivedEvent({
-      eventName: event.eventName,
-      eventDate: event.eventDate,
-      eventTime: event.eventTime,
-      startTime: event.startTime,
-      endTime: event.endTime,
-      isAllDay: event.isAllDay,
-      eventDescription: event.eventDescription,
-      eventLocation: event.eventLocation,
-      eventCoordinates: event.eventCoordinates,
-      eventLink: event.eventLink,
-      eventLinkText: event.eventLinkText,
-      isBannerEvent: event.isBannerEvent,
-      originalCreatedAt: event.createdAt,
-      originalUpdatedAt: event.updatedAt,
-      originalId: event._id
-    });
-
-    await archivedEvent.save();
-
-    // Now delete the original event
+    // Permanently delete the event (including any image data)
     await event.deleteOne();
     
-    res.json({ 
-      message: 'Event archived and removed',
-      archivedId: archivedEvent._id
-    });
+    res.json({ message: 'Event deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }

@@ -1,6 +1,6 @@
 // frontend/src/components/ManageAnnouncements.jsx
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -28,8 +28,10 @@ import {
   AlertDialogContent,
   AlertDialogOverlay,
   useColorModeValue,
+  Image,
+  useToast,
 } from '@chakra-ui/react';
-import { EditIcon, DeleteIcon } from '@chakra-ui/icons';
+import { EditIcon, DeleteIcon, CloseIcon } from '@chakra-ui/icons';
 
 const ManageAnnouncements = ({
   announcements,
@@ -40,9 +42,16 @@ const ManageAnnouncements = ({
 }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [isPosting, setIsPosting] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
+  const [editImagePreview, setEditImagePreview] = useState(null);
   const [announcementToDelete, setAnnouncementToDelete] = useState(null);
+  
+  const fileInputRef = useRef(null);
+  const editFileInputRef = useRef(null);
+  const toast = useToast();
   
   const { isOpen: isEditModalOpen, onOpen: onEditModalOpen, onClose: onEditModalClose } = useDisclosure();
   const { isOpen: isDeleteAlertOpen, onOpen: onDeleteAlertOpen, onClose: onDeleteAlertClose } = useDisclosure();
@@ -52,15 +61,110 @@ const ManageAnnouncements = ({
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const hoverBg = useColorModeValue('gray.50', 'gray.600');
 
+  // Handle image file selection for create form
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: 'File too large',
+          description: 'Image must be less than 2MB',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: 'Invalid file type',
+          description: 'Please select an image file',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result);
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle image file selection for edit modal
+  const handleEditImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: 'File too large',
+          description: 'Image must be less than 2MB',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: 'Invalid file type',
+          description: 'Please select an image file',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditingAnnouncement({
+          ...editingAnnouncement,
+          image: reader.result
+        });
+        setEditImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Remove image from create form
+  const handleRemoveImage = () => {
+    setImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Remove image from edit modal
+  const handleRemoveEditImage = () => {
+    setEditingAnnouncement({
+      ...editingAnnouncement,
+      image: null
+    });
+    setEditImagePreview(null);
+    if (editFileInputRef.current) {
+      editFileInputRef.current.value = '';
+    }
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
 
     setIsPosting(true);
     try {
-      await createAnnouncement({ title, content });
+      await createAnnouncement({ title, content, image });
       setTitle('');
       setContent('');
+      setImage(null);
+      setImagePreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     } catch (error) {
       // Error handled in hook
     } finally {
@@ -70,6 +174,7 @@ const ManageAnnouncements = ({
 
   const openEditModal = (announcement) => {
     setEditingAnnouncement(announcement);
+    setEditImagePreview(announcement.image || null);
     onEditModalOpen();
   };
 
@@ -80,9 +185,11 @@ const ManageAnnouncements = ({
       await updateAnnouncement(editingAnnouncement._id, {
         title: editingAnnouncement.title,
         content: editingAnnouncement.content,
+        image: editingAnnouncement.image,
       });
       onEditModalClose();
       setEditingAnnouncement(null);
+      setEditImagePreview(null);
     } catch (error) {
       // Error handled in hook
     }
@@ -133,6 +240,50 @@ const ManageAnnouncements = ({
               resize="none"
               rows={3}
             />
+            <Box width="100%">
+              <Text fontSize="xs" color="gray.500" mb={1}>Image/Flyer (optional, max 2MB)</Text>
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                size="sm"
+                sx={{
+                  '::file-selector-button': {
+                    height: '32px',
+                    padding: '0 12px',
+                    marginRight: '12px',
+                    background: 'gray.600',
+                    border: 'none',
+                    borderRadius: '4px',
+                    color: 'white',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                  }
+                }}
+              />
+              {imagePreview && (
+                <Box position="relative" mt={2} maxW="200px">
+                  <Image
+                    src={imagePreview}
+                    alt="Preview"
+                    borderRadius="md"
+                    border="1px solid"
+                    borderColor="gray.600"
+                  />
+                  <IconButton
+                    aria-label="Remove image"
+                    icon={<CloseIcon />}
+                    size="xs"
+                    colorScheme="red"
+                    position="absolute"
+                    top={1}
+                    right={1}
+                    onClick={handleRemoveImage}
+                  />
+                </Box>
+              )}
+            </Box>
             <Button
               type="submit"
               colorScheme="blue"
@@ -226,6 +377,50 @@ const ManageAnnouncements = ({
                 })}
                 rows={8}
               />
+              <Box width="100%">
+                <Text fontSize="sm" color="gray.500" mb={1}>Image/Flyer (optional, max 2MB)</Text>
+                <Input
+                  ref={editFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleEditImageChange}
+                  size="sm"
+                  sx={{
+                    '::file-selector-button': {
+                      height: '32px',
+                      padding: '0 12px',
+                      marginRight: '12px',
+                      background: 'gray.600',
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: 'white',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }
+                  }}
+                />
+                {editImagePreview && (
+                  <Box position="relative" mt={2} maxW="250px">
+                    <Image
+                      src={editImagePreview}
+                      alt="Preview"
+                      borderRadius="md"
+                      border="1px solid"
+                      borderColor="gray.600"
+                    />
+                    <IconButton
+                      aria-label="Remove image"
+                      icon={<CloseIcon />}
+                      size="xs"
+                      colorScheme="red"
+                      position="absolute"
+                      top={1}
+                      right={1}
+                      onClick={handleRemoveEditImage}
+                    />
+                  </Box>
+                )}
+              </Box>
             </VStack>
           </ModalBody>
           <ModalFooter>

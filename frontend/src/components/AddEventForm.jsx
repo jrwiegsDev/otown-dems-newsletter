@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Box,
   Button,
@@ -11,7 +11,11 @@ import {
   Select,
   Checkbox,
   useToast,
+  Image,
+  IconButton,
+  Text,
 } from '@chakra-ui/react';
+import { CloseIcon } from '@chakra-ui/icons';
 import { useAuth } from '../context/AuthContext';
 import eventService from '../services/eventService';
 import LocationAutocomplete from './LocationAutocomplete';
@@ -19,6 +23,7 @@ import LocationAutocomplete from './LocationAutocomplete';
 const AddEventForm = ({ onEventAdded }) => {
   const { user } = useAuth();
   const toast = useToast();
+  const fileInputRef = useRef(null);
   const [eventName, setEventName] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [isAllDay, setIsAllDay] = useState(false);
@@ -33,6 +38,8 @@ const AddEventForm = ({ onEventAdded }) => {
   const [eventDescription, setEventDescription] = useState('');
   const [eventLink, setEventLink] = useState('');
   const [eventLinkText, setEventLinkText] = useState('');
+  const [eventImage, setEventImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Generate options for dropdowns
@@ -44,6 +51,53 @@ const AddEventForm = ({ onEventAdded }) => {
     setEventLocation(locationData.address);
     if (locationData.lat && locationData.lng) {
       setEventCoordinates({ lat: locationData.lat, lng: locationData.lng });
+    }
+  };
+
+  // Handle image file selection
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (2MB limit)
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: 'File too large',
+          description: 'Image must be less than 2MB',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: 'Invalid file type',
+          description: 'Please select an image file',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      // Convert to Base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEventImage(reader.result);
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Remove selected image
+  const handleRemoveImage = () => {
+    setEventImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -60,6 +114,7 @@ const AddEventForm = ({ onEventAdded }) => {
         eventLink,
         eventLinkText,
         isAllDay,
+        eventImage,
       };
 
       // Only add time fields if not all-day event
@@ -93,6 +148,11 @@ const AddEventForm = ({ onEventAdded }) => {
       setEventDescription('');
       setEventLink('');
       setEventLinkText('');
+      setEventImage(null);
+      setImagePreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       onEventAdded();
     } catch (error) {
       toast({
@@ -216,6 +276,53 @@ const AddEventForm = ({ onEventAdded }) => {
             placeholder="Buy Tickets"
           />
         </FormControl>
+
+        <FormControl>
+          <FormLabel>Event Flyer/Image (optional)</FormLabel>
+          <Input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            sx={{
+              '::file-selector-button': {
+                height: '40px',
+                padding: '0 16px',
+                marginRight: '16px',
+                background: 'gray.600',
+                border: 'none',
+                borderRadius: '4px',
+                color: 'white',
+                cursor: 'pointer',
+              }
+            }}
+          />
+          <Text fontSize="sm" color="gray.500" mt={1}>
+            Max 2MB. Will be displayed when visitors click on the event.
+          </Text>
+          {imagePreview && (
+            <Box position="relative" mt={3} maxW="300px">
+              <Image
+                src={imagePreview}
+                alt="Event preview"
+                borderRadius="md"
+                border="1px solid"
+                borderColor="gray.600"
+              />
+              <IconButton
+                aria-label="Remove image"
+                icon={<CloseIcon />}
+                size="sm"
+                colorScheme="red"
+                position="absolute"
+                top={2}
+                right={2}
+                onClick={handleRemoveImage}
+              />
+            </Box>
+          )}
+        </FormControl>
+
         <Button type="submit" colorScheme="blue" isLoading={isLoading} alignSelf="stretch">
           Add Event
         </Button>

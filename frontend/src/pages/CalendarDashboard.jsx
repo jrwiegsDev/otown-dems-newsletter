@@ -31,8 +31,10 @@ import {
   Divider,
   Checkbox,
   Input,
+  Image,
+  useToast,
 } from '@chakra-ui/react';
-import { DeleteIcon, EditIcon } from '@chakra-ui/icons';
+import { DeleteIcon, EditIcon, CloseIcon } from '@chakra-ui/icons';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -57,12 +59,15 @@ const CalendarDashboard = ({
   deleteAnnouncement,
 }) => {
   const cancelRef = useRef();
+  const editEventImageRef = useRef(null);
+  const toast = useToast();
   const [isEventDeleteAlertOpen, setIsEventDeleteAlertOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState(null);
   const { isOpen: isEventEditModalOpen, onOpen: onEventEditModalOpen, onClose: onEventEditModalClose } = useDisclosure();
   const { isOpen: isMultiEventModalOpen, onOpen: onMultiEventModalOpen, onClose: onMultiEventModalClose } = useDisclosure();
   const [eventToEdit, setEventToEdit] = useState(null);
   const [selectedDateEvents, setSelectedDateEvents] = useState([]);
+  const [editEventImagePreview, setEditEventImagePreview] = useState(null);
   const [editEventFormData, setEditEventFormData] = useState({
     eventName: '',
     eventDate: '',
@@ -77,7 +82,8 @@ const CalendarDashboard = ({
     eventCoordinates: { lat: null, lng: null },
     eventDescription: '',
     eventLink: '',
-    eventLinkText: ''
+    eventLinkText: '',
+    eventImage: null
   });
 
   // Generate options for dropdowns
@@ -159,7 +165,9 @@ const CalendarDashboard = ({
       eventDescription: event.eventDescription || '',
       eventLink: event.eventLink || '',
       eventLinkText: event.eventLinkText || 'Learn More',
+      eventImage: event.eventImage || null,
     });
+    setEditEventImagePreview(event.eventImage || null);
     onEventEditModalOpen();
   };
 
@@ -181,6 +189,54 @@ const CalendarDashboard = ({
     });
   };
 
+  // Handle image file selection for edit event modal
+  const handleEditEventImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: 'File too large',
+          description: 'Image must be less than 2MB',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: 'Invalid file type',
+          description: 'Please select an image file',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditEventFormData({
+          ...editEventFormData,
+          eventImage: reader.result
+        });
+        setEditEventImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Remove image from edit event modal
+  const handleRemoveEditEventImage = () => {
+    setEditEventFormData({
+      ...editEventFormData,
+      eventImage: null
+    });
+    setEditEventImagePreview(null);
+    if (editEventImageRef.current) {
+      editEventImageRef.current.value = '';
+    }
+  };
+
   const handleEventEditSubmit = async () => {
     const updatedData = {
       eventName: editEventFormData.eventName,
@@ -191,6 +247,7 @@ const CalendarDashboard = ({
       eventLink: editEventFormData.eventLink,
       eventLinkText: editEventFormData.eventLinkText,
       isAllDay: editEventFormData.isAllDay,
+      eventImage: editEventFormData.eventImage,
     };
 
     // Only add time fields if not all-day event
@@ -503,6 +560,51 @@ const CalendarDashboard = ({
               <FormControl>
                 <FormLabel>Link Button Text (optional)</FormLabel>
                 <Input name="eventLinkText" value={editEventFormData.eventLinkText} onChange={handleEventEditFormChange} placeholder="Buy Tickets" />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Event Flyer/Image (optional)</FormLabel>
+                <Input
+                  ref={editEventImageRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleEditEventImageChange}
+                  sx={{
+                    '::file-selector-button': {
+                      height: '40px',
+                      padding: '0 16px',
+                      marginRight: '16px',
+                      background: 'gray.600',
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: 'white',
+                      cursor: 'pointer',
+                    }
+                  }}
+                />
+                <Text fontSize="sm" color="gray.500" mt={1}>
+                  Max 2MB. Will be displayed when visitors click on the event.
+                </Text>
+                {editEventImagePreview && (
+                  <Box position="relative" mt={3} maxW="300px">
+                    <Image
+                      src={editEventImagePreview}
+                      alt="Event preview"
+                      borderRadius="md"
+                      border="1px solid"
+                      borderColor="gray.600"
+                    />
+                    <IconButton
+                      aria-label="Remove image"
+                      icon={<CloseIcon />}
+                      size="sm"
+                      colorScheme="red"
+                      position="absolute"
+                      top={2}
+                      right={2}
+                      onClick={handleRemoveEditEventImage}
+                    />
+                  </Box>
+                )}
               </FormControl>
             </VStack>
           </ModalBody>

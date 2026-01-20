@@ -12,6 +12,9 @@ const announcementSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  image: {
+    type: String  // Base64 encoded image data
+  },
   createdAt: {
     type: Date,
     default: Date.now
