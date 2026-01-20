@@ -52,6 +52,9 @@ const eventSchema = new mongoose.Schema({
     trim: true,
     default: 'Learn More'
   },
+  eventImage: {
+    type: String  // Base64 encoded image data
+  },
   isBannerEvent: {
     type: Boolean,
     default: false

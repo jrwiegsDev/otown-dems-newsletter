@@ -5,6 +5,7 @@ const cors = require('cors');
 const http = require('http'); // 1. Import the 'http' module
 const WebSocket = require('ws'); // 2. Import the 'ws' library
 const { startPollScheduler } = require('./utils/pollScheduler'); // Import poll scheduler
+const { startEventScheduler } = require('./utils/eventScheduler'); // Import event scheduler
 
 const subscriberRoutes = require('./routes/subscriberRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -134,6 +135,9 @@ if (require.main === module) {
       
       // Start the poll scheduler
       startPollScheduler();
+      
+      // Start the event cleanup scheduler
+      startEventScheduler();
       
       // Start the HTTP server, which now also handles WebSocket connections
       server.listen(PORT, () => {
