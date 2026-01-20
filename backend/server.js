@@ -41,7 +41,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 // --- END OF CORS CONFIGURATION ---
 
-app.use(express.json());
+// Increase JSON body limit to 50MB to support newsletters with embedded images
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const PORT = process.env.PORT || 8000;
 
