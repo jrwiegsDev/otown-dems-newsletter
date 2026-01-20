@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css'; // Import Quill styles
 import {
@@ -43,6 +43,56 @@ import { DeleteIcon, EditIcon } from '@chakra-ui/icons';
 import { useAuth } from '../context/AuthContext';
 import newsletterService from '../services/newsletterService';
 
+// --- IMAGE COMPRESSION UTILITY ---
+// Compresses images before embedding to prevent 413 errors and improve email deliverability
+const compressImage = (file, maxWidth = 800, maxHeight = 800, quality = 0.8) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // Calculate new dimensions while maintaining aspect ratio
+        let { width, height } = img;
+        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        if (height > maxHeight) {
+          width = (width * maxHeight) / height;
+          height = maxHeight;
+        }
+
+        // Create canvas and draw resized image
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        
+        // Use better image smoothing for quality
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert to compressed JPEG (or PNG if transparency needed)
+        const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        const compressedDataUrl = canvas.toDataURL(mimeType, quality);
+        
+        // Log compression results
+        const originalSize = (file.size / 1024).toFixed(1);
+        const compressedSize = (compressedDataUrl.length * 0.75 / 1024).toFixed(1); // Base64 is ~33% larger
+        console.log(`📸 Image compressed: ${originalSize}KB → ${compressedSize}KB (${Math.round((1 - compressedSize/originalSize) * 100)}% reduction)`);
+        
+        resolve(compressedDataUrl);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+
 const NewsletterEditor = ({ selectedEmails = [], selectedCount = 0, totalSubscribers = 0 }) => {
   const { user } = useAuth();
   const toast = useToast();
@@ -72,6 +122,9 @@ const NewsletterEditor = ({ selectedEmails = [], selectedCount = 0, totalSubscri
   // Delete draft confirmation
   const [isDeleteDraftAlertOpen, setIsDeleteDraftAlertOpen] = useState(false);
   const deleteDraftCancelRef = useRef();
+  
+  // Quill editor ref for custom image handler
+  const quillRef = useRef(null);
 
   // Fetch drafts when modal opens
   const fetchDrafts = async () => {
@@ -244,24 +297,93 @@ const NewsletterEditor = ({ selectedEmails = [], selectedCount = 0, totalSubscri
     });
   };
 
+  // --- CUSTOM IMAGE HANDLER WITH COMPRESSION ---
+  const imageHandler = useCallback(() => {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+
+    input.onchange = async () => {
+      const file = input.files[0];
+      if (!file) return;
+
+      // Show loading toast for large images
+      const isLargeImage = file.size > 500 * 1024; // 500KB
+      let loadingToast;
+      if (isLargeImage) {
+        loadingToast = toast({
+          title: 'Compressing image...',
+          description: `Optimizing ${(file.size / 1024 / 1024).toFixed(1)}MB image for email`,
+          status: 'info',
+          duration: null,
+          isClosable: false,
+        });
+      }
+
+      try {
+        // Compress the image
+        const compressedDataUrl = await compressImage(file, 800, 800, 0.8);
+        
+        // Get the Quill editor instance and insert the image
+        const quill = quillRef.current?.getEditor();
+        if (quill) {
+          const range = quill.getSelection(true);
+          quill.insertEmbed(range.index, 'image', compressedDataUrl);
+          quill.setSelection(range.index + 1);
+        }
+
+        // Close loading toast and show success
+        if (loadingToast) {
+          toast.close(loadingToast);
+        }
+        toast({
+          title: 'Image added',
+          description: 'Image has been compressed and added to the newsletter',
+          status: 'success',
+          duration: 2000,
+          isClosable: true,
+        });
+      } catch (error) {
+        console.error('Error compressing image:', error);
+        if (loadingToast) {
+          toast.close(loadingToast);
+        }
+        toast({
+          title: 'Error',
+          description: 'Failed to process image. Please try again.',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    };
+  }, [toast]);
+
   // --- Define the COMPREHENSIVE toolbar configuration ---
-  const modules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-      [{ 'font': [] }],
-      [{ 'size': ['small', false, 'large', 'huge'] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'script': 'sub'}, { 'script': 'super' }],
-      ['blockquote', 'code-block'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      [{ 'indent': '-1'}, { 'indent': '+1' }],
-      [{ 'direction': 'rtl' }],
-      [{ 'align': [] }],
-      ['link', 'image', 'video'],
-      ['clean']
-    ],
-  };
+  // useMemo to prevent re-creating modules on every render
+  const modules = useMemo(() => ({
+    toolbar: {
+      container: [
+        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+        [{ 'font': [] }],
+        [{ 'size': ['small', false, 'large', 'huge'] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'script': 'sub'}, { 'script': 'super' }],
+        ['blockquote', 'code-block'],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'indent': '-1'}, { 'indent': '+1' }],
+        [{ 'direction': 'rtl' }],
+        [{ 'align': [] }],
+        ['link', 'image', 'video'],
+        ['clean']
+      ],
+      handlers: {
+        image: imageHandler  // Use our custom compressed image handler
+      }
+    },
+  }), [imageHandler]);
 
   const formats = [
     'header', 'font', 'size',
@@ -353,6 +475,7 @@ const NewsletterEditor = ({ selectedEmails = [], selectedCount = 0, totalSubscri
 
         <Box flex="1" minH="300px" display="flex" flexDirection="column">
           <ReactQuill
+            ref={quillRef}
             theme="snow"
             value={content}
             onChange={setContent}
