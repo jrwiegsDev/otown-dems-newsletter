@@ -52,6 +52,9 @@ const archivedEventSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  eventImage: {
+    type: String  // Base64 encoded image data
+  },
   isBannerEvent: {
     type: Boolean,
     default: false
