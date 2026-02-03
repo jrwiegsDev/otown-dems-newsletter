@@ -169,7 +169,18 @@ router.post('/', protect, async (req, res) => {
 // @access Private
 router.put('/:id', protect, async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id);
+    // Handle recurring instance IDs (e.g., "69820d92a506187f466f09bb_1")
+    // Extract the base ID if it contains an underscore followed by a number
+    let eventId = req.params.id;
+    const underscoreIndex = eventId.lastIndexOf('_');
+    if (underscoreIndex > 0) {
+      const suffix = eventId.substring(underscoreIndex + 1);
+      if (!isNaN(suffix)) {
+        eventId = eventId.substring(0, underscoreIndex);
+      }
+    }
+
+    const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -179,7 +190,7 @@ router.put('/:id', protect, async (req, res) => {
       return res.status(400).json({ message: 'Image size must be less than 2MB' });
     }
 
-    const updatedEvent = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updatedEvent = await Event.findByIdAndUpdate(eventId, req.body, { new: true });
     res.json(updatedEvent);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
@@ -191,7 +202,18 @@ router.put('/:id', protect, async (req, res) => {
 // @access Private
 router.delete('/:id', protect, async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id);
+    // Handle recurring instance IDs (e.g., "69820d92a506187f466f09bb_1")
+    // Extract the base ID if it contains an underscore followed by a number
+    let eventId = req.params.id;
+    const underscoreIndex = eventId.lastIndexOf('_');
+    if (underscoreIndex > 0) {
+      const suffix = eventId.substring(underscoreIndex + 1);
+      if (!isNaN(suffix)) {
+        eventId = eventId.substring(0, underscoreIndex);
+      }
+    }
+
+    const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -210,7 +232,17 @@ router.delete('/:id', protect, async (req, res) => {
 // @access Private
 router.put('/:id/banner', protect, async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id);
+    // Handle recurring instance IDs (e.g., "69820d92a506187f466f09bb_1")
+    let eventId = req.params.id;
+    const underscoreIndex = eventId.lastIndexOf('_');
+    if (underscoreIndex > 0) {
+      const suffix = eventId.substring(underscoreIndex + 1);
+      if (!isNaN(suffix)) {
+        eventId = eventId.substring(0, underscoreIndex);
+      }
+    }
+
+    const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -227,7 +259,7 @@ router.put('/:id/banner', protect, async (req, res) => {
 
     // If setting this event as banner, unset all other banner events
     if (!event.isBannerEvent) {
-      await Event.updateMany({ _id: { $ne: req.params.id } }, { isBannerEvent: false });
+      await Event.updateMany({ _id: { $ne: eventId } }, { isBannerEvent: false });
       event.isBannerEvent = true;
     } else {
       event.isBannerEvent = false;
