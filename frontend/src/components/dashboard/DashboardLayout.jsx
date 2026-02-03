@@ -13,9 +13,20 @@ import {
   FormControl,
   FormLabel,
   useColorMode,
+  useColorModeValue,
   useToast,
+  useDisclosure,
+  Drawer,
+  DrawerBody,
+  DrawerHeader,
+  DrawerOverlay,
+  DrawerContent,
+  DrawerCloseButton,
+  VStack,
+  Show,
+  Hide,
 } from '@chakra-ui/react';
-import { MoonIcon, SunIcon } from '@chakra-ui/icons';
+import { MoonIcon, SunIcon, HamburgerIcon } from '@chakra-ui/icons';
 import ChangePasswordButton from '../ChangePasswordButton';
 import api from '../../api/axiosConfig';
 
@@ -26,6 +37,7 @@ const DashboardLayout = ({ currentView, onViewChange, children }) => {
   const toast = useToast();
   const [snowfallEnabled, setSnowfallEnabled] = useState(false);
   const [isTogglingSnow, setIsTogglingSnow] = useState(false);
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   // Fetch initial snowfall status
   useEffect(() => {
@@ -99,74 +111,188 @@ const DashboardLayout = ({ currentView, onViewChange, children }) => {
     }
   };
 
+  const handleNavClick = (view) => {
+    onViewChange(view);
+    onClose();
+  };
+
   return (
-    <Box p={5} h="100vh" display="flex" flexDirection="column">
-      {/* Header */}
-      <Flex justifyContent="space-between" alignItems="center" mb={8} flexShrink={0}>
-        <Heading>{getViewTitle()}</Heading>
-        <Stack direction="row" spacing={4} alignItems="center">
-          {user && <Text>Welcome, {user.username}!</Text>}
-          
-          {/* Snowfall Toggle - Superadmin Only */}
-          {user?.role === 'superadmin' && (
-            <FormControl display="flex" alignItems="center" width="auto">
-              <FormLabel htmlFor="snowfall-toggle" mb="0" mr={2} fontSize="sm">
-                Snowfall
-              </FormLabel>
-              <Switch
-                id="snowfall-toggle"
-                isChecked={snowfallEnabled}
-                onChange={handleSnowfallToggle}
-                isDisabled={isTogglingSnow}
-                colorScheme="blue"
-              />
-            </FormControl>
-          )}
-          
-          <Button 
-            onClick={() => onViewChange('newsletter')}
-            colorScheme={currentView === 'newsletter' ? 'blue' : 'gray'}
-            variant={currentView === 'newsletter' ? 'solid' : 'outline'}
-          >
-            Newsletter
-          </Button>
-          <Button 
-            onClick={() => onViewChange('calendar')}
-            colorScheme={currentView === 'calendar' ? 'blue' : 'gray'}
-            variant={currentView === 'calendar' ? 'solid' : 'outline'}
-          >
-            Calendar
-          </Button>
-          <Button 
-            onClick={() => onViewChange('analytics')}
-            colorScheme={currentView === 'analytics' ? 'blue' : 'gray'}
-            variant={currentView === 'analytics' ? 'solid' : 'outline'}
-          >
-            Analytics
-          </Button>
-          {user?.role === 'superadmin' && (
+    <Box minH="100vh" display="flex" flexDirection="column">
+      {/* Header - Sticky */}
+      <Flex 
+        justifyContent="space-between" 
+        alignItems="center" 
+        p={{ base: 2, md: 5 }}
+        pb={{ base: 2, md: 4 }}
+        flexShrink={0}
+        flexWrap="wrap"
+        gap={2}
+        position="sticky"
+        top={0}
+        zIndex={10}
+        bg={useColorModeValue('white', 'gray.800')}
+        borderBottom="1px"
+        borderColor={useColorModeValue('gray.200', 'gray.700')}
+      >
+        <Heading fontSize={{ base: 'lg', md: 'xl', lg: '2xl' }}>{getViewTitle()}</Heading>
+        
+        {/* Desktop Navigation - Hidden on mobile */}
+        <Hide below="lg">
+          <Stack direction="row" spacing={4} alignItems="center">
+            {user && <Text>Welcome, {user.username}!</Text>}
+            
+            {/* Snowfall Toggle - Superadmin Only */}
+            {user?.role === 'superadmin' && (
+              <FormControl display="flex" alignItems="center" width="auto">
+                <FormLabel htmlFor="snowfall-toggle" mb="0" mr={2} fontSize="sm">
+                  Snowfall
+                </FormLabel>
+                <Switch
+                  id="snowfall-toggle"
+                  isChecked={snowfallEnabled}
+                  onChange={handleSnowfallToggle}
+                  isDisabled={isTogglingSnow}
+                  colorScheme="blue"
+                />
+              </FormControl>
+            )}
+            
             <Button 
-              onClick={() => onViewChange('staff')}
-              colorScheme={currentView === 'staff' ? 'purple' : 'gray'}
-              variant={currentView === 'staff' ? 'solid' : 'outline'}
+              onClick={() => onViewChange('newsletter')}
+              colorScheme={currentView === 'newsletter' ? 'blue' : 'gray'}
+              variant={currentView === 'newsletter' ? 'solid' : 'outline'}
             >
-              Staff
+              Newsletter
             </Button>
-          )}
-          <ChangePasswordButton user={user} />
-          <IconButton
-            onClick={toggleColorMode}
-            icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
-            aria-label="Toggle dark mode"
-          />
-          <Button colorScheme="red" onClick={handleLogout}>
-            Logout
-          </Button>
-        </Stack>
+            <Button 
+              onClick={() => onViewChange('calendar')}
+              colorScheme={currentView === 'calendar' ? 'blue' : 'gray'}
+              variant={currentView === 'calendar' ? 'solid' : 'outline'}
+            >
+              Calendar
+            </Button>
+            <Button 
+              onClick={() => onViewChange('analytics')}
+              colorScheme={currentView === 'analytics' ? 'blue' : 'gray'}
+              variant={currentView === 'analytics' ? 'solid' : 'outline'}
+            >
+              Analytics
+            </Button>
+            {user?.role === 'superadmin' && (
+              <Button 
+                onClick={() => onViewChange('staff')}
+                colorScheme={currentView === 'staff' ? 'purple' : 'gray'}
+                variant={currentView === 'staff' ? 'solid' : 'outline'}
+              >
+                Staff
+              </Button>
+            )}
+            <ChangePasswordButton user={user} />
+            <IconButton
+              onClick={toggleColorMode}
+              icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
+              aria-label="Toggle dark mode"
+            />
+            <Button colorScheme="red" onClick={handleLogout}>
+              Logout
+            </Button>
+          </Stack>
+        </Hide>
+
+        {/* Mobile Navigation - Hamburger + essential buttons */}
+        <Show below="lg">
+          <Stack direction="row" spacing={2} alignItems="center">
+            <IconButton
+              onClick={toggleColorMode}
+              icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
+              aria-label="Toggle dark mode"
+              size="sm"
+            />
+            <IconButton
+              icon={<HamburgerIcon />}
+              onClick={onOpen}
+              aria-label="Open menu"
+              size="sm"
+            />
+          </Stack>
+        </Show>
       </Flex>
 
+      {/* Mobile Drawer Menu */}
+      <Drawer isOpen={isOpen} placement="right" onClose={onClose}>
+        <DrawerOverlay />
+        <DrawerContent>
+          <DrawerCloseButton />
+          <DrawerHeader borderBottomWidth="1px">
+            {user && `Welcome, ${user.username}!`}
+          </DrawerHeader>
+          <DrawerBody>
+            <VStack spacing={3} align="stretch" mt={4}>
+              <Button 
+                onClick={() => handleNavClick('newsletter')}
+                colorScheme={currentView === 'newsletter' ? 'blue' : 'gray'}
+                variant={currentView === 'newsletter' ? 'solid' : 'outline'}
+                w="100%"
+              >
+                Newsletter
+              </Button>
+              <Button 
+                onClick={() => handleNavClick('calendar')}
+                colorScheme={currentView === 'calendar' ? 'blue' : 'gray'}
+                variant={currentView === 'calendar' ? 'solid' : 'outline'}
+                w="100%"
+              >
+                Calendar
+              </Button>
+              <Button 
+                onClick={() => handleNavClick('analytics')}
+                colorScheme={currentView === 'analytics' ? 'blue' : 'gray'}
+                variant={currentView === 'analytics' ? 'solid' : 'outline'}
+                w="100%"
+              >
+                Analytics
+              </Button>
+              {user?.role === 'superadmin' && (
+                <Button 
+                  onClick={() => handleNavClick('staff')}
+                  colorScheme={currentView === 'staff' ? 'purple' : 'gray'}
+                  variant={currentView === 'staff' ? 'solid' : 'outline'}
+                  w="100%"
+                >
+                  Staff
+                </Button>
+              )}
+              
+              {/* Snowfall Toggle - Superadmin Only */}
+              {user?.role === 'superadmin' && (
+                <FormControl display="flex" alignItems="center" justifyContent="space-between" py={2}>
+                  <FormLabel htmlFor="snowfall-toggle-mobile" mb="0" fontSize="sm">
+                    Snowfall Feature
+                  </FormLabel>
+                  <Switch
+                    id="snowfall-toggle-mobile"
+                    isChecked={snowfallEnabled}
+                    onChange={handleSnowfallToggle}
+                    isDisabled={isTogglingSnow}
+                    colorScheme="blue"
+                  />
+                </FormControl>
+              )}
+              
+              <Box pt={4} borderTopWidth="1px">
+                <ChangePasswordButton user={user} />
+              </Box>
+              
+              <Button colorScheme="red" onClick={handleLogout} w="100%">
+                Logout
+              </Button>
+            </VStack>
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
+
       {/* Main Content Area */}
-      <Box flex="1" minH="0" display="flex" flexDirection="column">
+      <Box flex="1" minH="0" display="flex" flexDirection="column" overflow="auto" p={{ base: 2, md: 5 }} pt={{ base: 4, md: 6 }}>
         {children}
       </Box>
     </Box>
