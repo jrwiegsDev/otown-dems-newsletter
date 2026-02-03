@@ -29,7 +29,7 @@ const eventSchema = new mongoose.Schema({
   eventDescription: {
     type: String,
     trim: true,
-    maxlength: [300, 'Description cannot exceed 300 characters']
+    maxlength: [500, 'Description cannot exceed 500 characters']
   },
   eventLocation: {
     type: String,
@@ -58,6 +58,16 @@ const eventSchema = new mongoose.Schema({
   isBannerEvent: {
     type: Boolean,
     default: false
+  },
+  // Recurring event fields
+  recurrenceType: {
+    type: String,
+    enum: ['none', 'weekly', 'biweekly', 'monthly'],
+    default: 'none'
+  },
+  recurrenceEndDate: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true // Automatically adds createdAt and updatedAt
