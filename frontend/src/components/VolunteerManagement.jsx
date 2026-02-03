@@ -203,8 +203,8 @@ const VolunteerManagement = ({
             </Text>
           </Box>
         ) : (
-          <TableContainer>
-            <Table variant="simple">
+          <TableContainer overflow="auto">
+            <Table variant="simple" minW="800px">
               <Thead>
                 <Tr>
                   <Th>First Name</Th>

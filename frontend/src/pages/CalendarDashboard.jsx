@@ -331,17 +331,20 @@ const CalendarDashboard = ({
 
   return (
     <>
-      {/* 2x2 Grid Layout for Calendar Dashboard */}
+      {/* 2x2 Grid Layout for Calendar Dashboard - Stacks on mobile */}
       <Grid 
-        templateAreas={`"calendar management" "events announcement"`} 
-        gridTemplateColumns={'1fr 1fr'} 
-        gridTemplateRows={'auto auto'}
-        gap="8"
+        templateAreas={{
+          base: `"calendar" "management" "events" "announcement"`,
+          lg: `"calendar management" "events announcement"`
+        }}
+        gridTemplateColumns={{ base: '1fr', lg: '1fr 1fr' }}
+        gridTemplateRows={'auto'}
+        gap={{ base: 4, md: 8 }}
       >
         {/* TOP LEFT: Calendar */}
         <GridItem area="calendar" display="flex" flexDirection="column">
-          <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" display="flex" flexDirection="column" h="700px">
-            <Heading fontSize="xl" flexShrink={0} mb={4}>Calendar View</Heading>
+          <Box p={{ base: 3, md: 5 }} shadow="md" borderWidth="1px" borderRadius="md" display="flex" flexDirection="column" h={{ base: 'auto', lg: '700px' }} minH="400px">
+            <Heading fontSize={{ base: 'lg', md: 'xl' }} flexShrink={0} mb={4}>Calendar View</Heading>
             <Box flexGrow={1} overflow="hidden">
               <FullCalendar
                 plugins={[dayGridPlugin, interactionPlugin]}
@@ -409,8 +412,8 @@ const CalendarDashboard = ({
 
         {/* TOP RIGHT: Event Management (Create Event) */}
         <GridItem area="management" display="flex" flexDirection="column">
-          <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" display="flex" flexDirection="column" h="700px">
-            <Heading fontSize="xl" flexShrink={0} mb={4}>Event Management</Heading>
+          <Box p={{ base: 3, md: 5 }} shadow="md" borderWidth="1px" borderRadius="md" display="flex" flexDirection="column" h={{ base: 'auto', lg: '700px' }}>
+            <Heading fontSize={{ base: 'lg', md: 'xl' }} flexShrink={0} mb={4}>Event Management</Heading>
             <Box flex="1" overflowY="auto" pr={2}>
               <AddEventForm onEventAdded={fetchEvents} />
             </Box>
@@ -419,8 +422,8 @@ const CalendarDashboard = ({
 
         {/* BOTTOM LEFT: Current Events List */}
         <GridItem area="events" display="flex" flexDirection="column">
-          <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" display="flex" flexDirection="column" minH="500px" maxH="500px">
-            <Heading fontSize="lg" flexShrink={0} mb={4}>Current Events</Heading>
+          <Box p={{ base: 3, md: 5 }} shadow="md" borderWidth="1px" borderRadius="md" display="flex" flexDirection="column" minH={{ base: '300px', md: '500px' }} maxH={{ base: '400px', md: '500px' }}>
+            <Heading fontSize={{ base: 'md', md: 'lg' }} flexShrink={0} mb={4}>Current Events</Heading>
             {isLoadingEvents ? (
               <Spinner />
             ) : (
@@ -478,7 +481,7 @@ const CalendarDashboard = ({
 
         {/* BOTTOM RIGHT: Manage Announcements */}
         <GridItem area="announcement" display="flex" flexDirection="column">
-          <Box display="flex" flexDirection="column" minH="500px">
+          <Box display="flex" flexDirection="column" minH={{ base: '300px', md: '500px' }}>
             <ManageAnnouncements
               announcements={announcements}
               isLoadingAnnouncements={isLoadingAnnouncements}

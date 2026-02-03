@@ -266,9 +266,9 @@ const StaffManagement = ({ user }) => {
           border="1px" 
           borderColor={borderColor} 
           borderRadius="md" 
-          overflowX="auto"
+          overflow="auto"
         >
-          <Table variant="simple">
+          <Table variant="simple" minW="700px">
             <Thead>
               <Tr>
                 <Th>Name</Th>
