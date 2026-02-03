@@ -2,10 +2,21 @@ import api from '../api/axiosConfig';
 
 const API_URL = '/api/events/';
 
-// Get all events
+// Get all events (expanded with recurring instances for public display)
 const getAllEvents = async () => {
   // No token is needed because this route is public
   const response = await api.get(API_URL);
+  return response.data;
+};
+
+// Get raw events without expanding recurring instances (for admin management)
+const getRawEvents = async (token) => {
+  const config = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+  const response = await api.get(API_URL + 'raw', config);
   return response.data;
 };
 
@@ -44,6 +55,7 @@ const toggleBannerEvent = async (eventId, token) => {
 const eventService = {
   createEvent,
   getAllEvents,
+  getRawEvents,
   updateEvent,
   deleteEvent,
   toggleBannerEvent,
