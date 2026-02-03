@@ -170,10 +170,19 @@ const NewsletterDashboard = ({
 
   return (
     <>
-      <Grid templateAreas={`"compose subscribers"`} gridTemplateColumns={'1fr 1fr'} gap="8" flex="1" minH="0">
+      <Grid 
+        templateAreas={{
+          base: `"compose" "subscribers"`,
+          lg: `"compose subscribers"`
+        }}
+        gridTemplateColumns={{ base: '1fr', lg: '1fr 1fr' }}
+        gap={{ base: 4, md: 8 }}
+        flex="1" 
+        minH="0"
+      >
         <GridItem area="compose" display="flex" flexDirection="column" minH="0">
-          <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column" minH="0">
-            <Heading fontSize="xl" mb={4} flexShrink={0}>Compose Newsletter</Heading>
+          <Box p={{ base: 3, md: 5 }} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column" minH="0">
+            <Heading fontSize={{ base: 'lg', md: 'xl' }} mb={4} flexShrink={0}>Compose Newsletter</Heading>
             <Box flex="1" minH="0">
               <NewsletterEditor 
                 selectedEmails={getSelectedEmails()}
@@ -185,19 +194,19 @@ const NewsletterDashboard = ({
         </GridItem>
         
         <GridItem area="subscribers" display="flex" flexDirection="column" minH="0">
-          <Box p={5} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column" minH="0">
-            <Flex justifyContent="space-between" alignItems="center" flexShrink={0} mb={4}>
-              <Heading fontSize="xl">Subscriber Management</Heading>
-              <Flex gap={3} alignItems="center">
-                <Text fontSize="lg" fontWeight="semibold" color="blue.400">
-                  Total Subscribers: {subscribers.length}
+          <Box p={{ base: 3, md: 5 }} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column" minH="0">
+            <Flex justifyContent="space-between" alignItems="center" flexShrink={0} mb={4} flexWrap="wrap" gap={2}>
+              <Heading fontSize={{ base: 'lg', md: 'xl' }}>Subscriber Management</Heading>
+              <Flex gap={{ base: 1, md: 3 }} alignItems="center" flexWrap="wrap">
+                <Text fontSize={{ base: 'sm', md: 'lg' }} fontWeight="semibold" color="blue.400">
+                  Total: {subscribers.length}
                 </Text>
                 <Button
                   colorScheme="teal"
                   size="sm"
                   onClick={handleExportSignInSheet}
                 >
-                  📋 Export Sign-In Sheet
+                  📋 Export
                 </Button>
               </Flex>
             </Flex>
@@ -241,8 +250,8 @@ const NewsletterDashboard = ({
                     </Text>
                   )}
                 </Flex>
-                <TableContainer flex="1" overflowY="auto" minH="0">
-                  <Table variant="simple">
+                <TableContainer flex="1" overflow="auto" minH="0">
+                  <Table variant="simple" minW="600px">
                     <Thead>
                       <Tr>
                         <Th width="40px" px={2}>

@@ -799,7 +799,7 @@ const AnalyticsDashboard = () => {
                   <Heading size="lg" mb={4}>Volunteer Analytics</Heading>
                   
                   {/* Summary Stats */}
-                  <Grid templateColumns="repeat(2, 1fr)" gap={4} mb={6}>
+                  <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4} mb={6}>
                     <Box bg={useColorModeValue('blue.50', 'blue.900')} p={4} borderRadius="md">
                       <Stat>
                         <StatLabel fontSize="sm">Total Volunteers</StatLabel>
