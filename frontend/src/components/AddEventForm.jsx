@@ -41,6 +41,8 @@ const AddEventForm = ({ onEventAdded }) => {
   const [eventImage, setEventImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [recurrenceType, setRecurrenceType] = useState('none');
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
 
   // Generate options for dropdowns
   const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
@@ -70,11 +72,13 @@ const AddEventForm = ({ onEventAdded }) => {
         return;
       }
 
-      // Check file type
-      if (!file.type.startsWith('image/')) {
+      // Check file type (allow images and PDFs)
+      const isImage = file.type.startsWith('image/');
+      const isPDF = file.type === 'application/pdf';
+      if (!isImage && !isPDF) {
         toast({
           title: 'Invalid file type',
-          description: 'Please select an image file',
+          description: 'Please select an image or PDF file',
           status: 'error',
           duration: 3000,
           isClosable: true,
@@ -115,6 +119,8 @@ const AddEventForm = ({ onEventAdded }) => {
         eventLinkText,
         isAllDay,
         eventImage,
+        recurrenceType,
+        recurrenceEndDate: recurrenceType !== 'none' ? recurrenceEndDate : null,
       };
 
       // Only add time fields if not all-day event
@@ -150,6 +156,8 @@ const AddEventForm = ({ onEventAdded }) => {
       setEventLinkText('');
       setEventImage(null);
       setImagePreview(null);
+      setRecurrenceType('none');
+      setRecurrenceEndDate('');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -185,6 +193,31 @@ const AddEventForm = ({ onEventAdded }) => {
             onChange={(e) => setEventDate(e.target.value)}
           />
         </FormControl>
+
+        <FormControl>
+          <FormLabel>Repeat Event</FormLabel>
+          <Select value={recurrenceType} onChange={(e) => setRecurrenceType(e.target.value)}>
+            <option value="none">Does not repeat</option>
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Every 2 weeks</option>
+            <option value="monthly">Monthly</option>
+          </Select>
+        </FormControl>
+
+        {recurrenceType !== 'none' && (
+          <FormControl isRequired>
+            <FormLabel>Repeat Until</FormLabel>
+            <Input
+              type="date"
+              value={recurrenceEndDate}
+              onChange={(e) => setRecurrenceEndDate(e.target.value)}
+              min={eventDate}
+            />
+            <Text fontSize="sm" color="gray.500" mt={1}>
+              Event will repeat {recurrenceType === 'weekly' ? 'every week' : recurrenceType === 'biweekly' ? 'every 2 weeks' : 'every month'} until this date.
+            </Text>
+          </FormControl>
+        )}
         
         <FormControl>
           <Checkbox 
@@ -251,12 +284,12 @@ const AddEventForm = ({ onEventAdded }) => {
         </FormControl>
 
         <FormControl>
-          <FormLabel>Event Description (max 300 characters)</FormLabel>
+          <FormLabel>Event Description (max 500 characters)</FormLabel>
           <Textarea
             value={eventDescription}
             onChange={(e) => setEventDescription(e.target.value)}
             placeholder="Brief description of the event"
-            maxLength={300}
+            maxLength={500}
           />
         </FormControl>
         <FormControl>
@@ -282,7 +315,7 @@ const AddEventForm = ({ onEventAdded }) => {
           <Input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,.pdf,application/pdf"
             onChange={handleImageChange}
             sx={{
               '::file-selector-button': {
@@ -298,19 +331,33 @@ const AddEventForm = ({ onEventAdded }) => {
             }}
           />
           <Text fontSize="sm" color="gray.500" mt={1}>
-            Max 2MB. Will be displayed when visitors click on the event.
+            Max 2MB. Accepts images (JPG, PNG) or single-page PDF flyers.
           </Text>
           {imagePreview && (
             <Box position="relative" mt={3} maxW="300px">
-              <Image
-                src={imagePreview}
-                alt="Event preview"
-                borderRadius="md"
-                border="1px solid"
-                borderColor="gray.600"
-              />
+              {imagePreview.startsWith('data:application/pdf') ? (
+                <Box
+                  p={4}
+                  borderRadius="md"
+                  border="1px solid"
+                  borderColor="gray.600"
+                  bg="gray.700"
+                  textAlign="center"
+                >
+                  <Text fontSize="sm" color="gray.300">PDF Flyer Selected</Text>
+                  <Text fontSize="xs" color="gray.500" mt={1}>Will be displayed to visitors</Text>
+                </Box>
+              ) : (
+                <Image
+                  src={imagePreview}
+                  alt="Event preview"
+                  borderRadius="md"
+                  border="1px solid"
+                  borderColor="gray.600"
+                />
+              )}
               <IconButton
-                aria-label="Remove image"
+                aria-label="Remove file"
                 icon={<CloseIcon />}
                 size="sm"
                 colorScheme="red"

@@ -7,11 +7,12 @@ const useEvents = (user) => {
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const toast = useToast();
 
-  // Fetch all events
+  // Fetch all events (raw, non-expanded for admin management)
   const fetchEvents = async () => {
     setIsLoadingEvents(true);
     try {
-      const data = await eventService.getAllEvents();
+      // Use raw endpoint to get non-expanded events for admin management
+      const data = await eventService.getRawEvents(user.token);
       setEvents(data);
     } catch (error) {
       console.error('Failed to fetch events', error);

@@ -3,8 +3,90 @@ const router = express.Router();
 const Event = require('../models/eventModel');
 const { protect } = require('../middleware/authMiddleware');
 
-// Get all events (Public)
+// Helper function to generate recurring event instances
+const generateRecurringInstances = (event, maxDate) => {
+  const instances = [];
+  const startDate = new Date(event.eventDate);
+  const endDate = event.recurrenceEndDate ? new Date(event.recurrenceEndDate) : maxDate;
+  
+  // Determine interval in days based on recurrence type
+  let intervalDays;
+  switch (event.recurrenceType) {
+    case 'weekly':
+      intervalDays = 7;
+      break;
+    case 'biweekly':
+      intervalDays = 14;
+      break;
+    case 'monthly':
+      intervalDays = null; // Handle monthly separately
+      break;
+    default:
+      return [event]; // No recurrence, return original event
+  }
+
+  let currentDate = new Date(startDate);
+  let instanceIndex = 0;
+  
+  while (currentDate <= endDate && currentDate <= maxDate) {
+    // Create a virtual instance with the same properties but different date
+    // Generate a unique _id for each instance by combining original ID and instance index
+    const instanceId = `${event._id}_${instanceIndex}`;
+    const instance = {
+      ...event.toObject(),
+      _id: instanceIndex === 0 ? event._id : instanceId, // Keep original ID for first instance
+      eventDate: new Date(currentDate),
+      isRecurringInstance: instanceIndex > 0,
+      originalEventId: event._id,
+      instanceDate: new Date(currentDate)
+    };
+    instances.push(instance);
+    
+    // Move to next occurrence
+    if (intervalDays) {
+      currentDate = new Date(currentDate.getTime() + intervalDays * 24 * 60 * 60 * 1000);
+    } else {
+      // Monthly: same day next month
+      currentDate = new Date(currentDate);
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+    instanceIndex++;
+  }
+  
+  return instances;
+};
+
+// Get all events (Public) - expands recurring events
 router.get('/', async (req, res) => {
+  try {
+    const events = await Event.find().sort({ eventDate: 1 });
+    
+    // Calculate max date for recurring events (6 months from now)
+    const maxDate = new Date();
+    maxDate.setMonth(maxDate.getMonth() + 6);
+    
+    // Expand recurring events into instances
+    const expandedEvents = [];
+    for (const event of events) {
+      if (event.recurrenceType && event.recurrenceType !== 'none') {
+        const instances = generateRecurringInstances(event, maxDate);
+        expandedEvents.push(...instances);
+      } else {
+        expandedEvents.push(event);
+      }
+    }
+    
+    // Sort by event date
+    expandedEvents.sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
+    
+    res.json(expandedEvents);
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+// Get raw events without expansion (for admin editing)
+router.get('/raw', protect, async (req, res) => {
   try {
     const events = await Event.find().sort({ eventDate: 1 });
     res.json(events);
@@ -41,7 +123,9 @@ router.post('/', protect, async (req, res) => {
       eventLink,
       eventLinkText,
       eventImage,
-      isBannerEvent
+      isBannerEvent,
+      recurrenceType,
+      recurrenceEndDate
     } = req.body;
 
     if (!eventName || !eventDate) {
@@ -68,6 +152,8 @@ router.post('/', protect, async (req, res) => {
       eventLinkText,
       eventImage,
       isBannerEvent,
+      recurrenceType: recurrenceType || 'none',
+      recurrenceEndDate: recurrenceEndDate || null,
     });
 
     const createdEvent = await event.save();

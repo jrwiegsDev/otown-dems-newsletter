@@ -83,13 +83,73 @@ const CalendarDashboard = ({
     eventDescription: '',
     eventLink: '',
     eventLinkText: '',
-    eventImage: null
+    eventImage: null,
+    recurrenceType: 'none',
+    recurrenceEndDate: ''
   });
 
   // Generate options for dropdowns
   const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
   const minutes = ['00', '15', '30', '45'];
   const periods = ['AM', 'PM'];
+
+  // Helper function to expand recurring events for calendar display
+  const expandRecurringEvents = (events) => {
+    const expandedEvents = [];
+    const maxDate = new Date();
+    maxDate.setMonth(maxDate.getMonth() + 6);
+
+    for (const event of events) {
+      if (event.recurrenceType && event.recurrenceType !== 'none') {
+        const startDate = new Date(event.eventDate);
+        const endDate = event.recurrenceEndDate ? new Date(event.recurrenceEndDate) : maxDate;
+        
+        let intervalDays;
+        switch (event.recurrenceType) {
+          case 'weekly':
+            intervalDays = 7;
+            break;
+          case 'biweekly':
+            intervalDays = 14;
+            break;
+          case 'monthly':
+            intervalDays = null;
+            break;
+          default:
+            intervalDays = 7;
+        }
+
+        let currentDate = new Date(startDate);
+        let instanceIndex = 0;
+
+        while (currentDate <= endDate && currentDate <= maxDate) {
+          const instance = {
+            ...event,
+            _id: instanceIndex === 0 ? event._id : `${event._id}_${instanceIndex}`,
+            eventDate: new Date(currentDate).toISOString(),
+            isRecurringInstance: instanceIndex > 0,
+            originalEventId: event._id
+          };
+          expandedEvents.push(instance);
+
+          if (intervalDays) {
+            currentDate = new Date(currentDate.getTime() + intervalDays * 24 * 60 * 60 * 1000);
+          } else {
+            currentDate = new Date(currentDate);
+            currentDate.setMonth(currentDate.getMonth() + 1);
+          }
+          instanceIndex++;
+        }
+      } else {
+        expandedEvents.push(event);
+      }
+    }
+
+    return expandedEvents.sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
+  };
+
+  // Expanded events for calendar display
+  const calendarEvents = expandRecurringEvents(events);
 
   // Helper function to format time display (handles both old and new formats)
   const formatEventTime = (event) => {
@@ -166,6 +226,8 @@ const CalendarDashboard = ({
       eventLink: event.eventLink || '',
       eventLinkText: event.eventLinkText || 'Learn More',
       eventImage: event.eventImage || null,
+      recurrenceType: event.recurrenceType || 'none',
+      recurrenceEndDate: event.recurrenceEndDate ? new Date(event.recurrenceEndDate).toISOString().split('T')[0] : '',
     });
     setEditEventImagePreview(event.eventImage || null);
     onEventEditModalOpen();
@@ -196,17 +258,20 @@ const CalendarDashboard = ({
       if (file.size > 2 * 1024 * 1024) {
         toast({
           title: 'File too large',
-          description: 'Image must be less than 2MB',
+          description: 'File must be less than 2MB',
           status: 'error',
           duration: 3000,
           isClosable: true,
         });
         return;
       }
-      if (!file.type.startsWith('image/')) {
+      // Check file type (allow images and PDFs)
+      const isImage = file.type.startsWith('image/');
+      const isPDF = file.type === 'application/pdf';
+      if (!isImage && !isPDF) {
         toast({
           title: 'Invalid file type',
-          description: 'Please select an image file',
+          description: 'Please select an image or PDF file',
           status: 'error',
           duration: 3000,
           isClosable: true,
@@ -248,6 +313,8 @@ const CalendarDashboard = ({
       eventLinkText: editEventFormData.eventLinkText,
       isAllDay: editEventFormData.isAllDay,
       eventImage: editEventFormData.eventImage,
+      recurrenceType: editEventFormData.recurrenceType,
+      recurrenceEndDate: editEventFormData.recurrenceType !== 'none' ? editEventFormData.recurrenceEndDate : null,
     };
 
     // Only add time fields if not all-day event
@@ -279,12 +346,12 @@ const CalendarDashboard = ({
               <FullCalendar
                 plugins={[dayGridPlugin, interactionPlugin]}
                 initialView="dayGridMonth"
-                events={events.map(event => ({
+                events={calendarEvents.map(event => ({
                   id: event._id,
                   title: event.eventName,
                   date: event.eventDate.slice(0, 10),
-                  backgroundColor: event.isBannerEvent ? 'var(--chakra-colors-yellow-500)' : 'var(--chakra-colors-blue-500)',
-                  borderColor: event.isBannerEvent ? 'var(--chakra-colors-yellow-600)' : 'var(--chakra-colors-blue-600)',
+                  backgroundColor: event.isBannerEvent ? 'var(--chakra-colors-yellow-500)' : event.isRecurringInstance ? 'var(--chakra-colors-purple-500)' : 'var(--chakra-colors-blue-500)',
+                  borderColor: event.isBannerEvent ? 'var(--chakra-colors-yellow-600)' : event.isRecurringInstance ? 'var(--chakra-colors-purple-600)' : 'var(--chakra-colors-blue-600)',
                   classNames: event.isBannerEvent ? ['banner-event'] : [],
                   extendedProps: {
                     description: event.eventDescription,
@@ -370,9 +437,19 @@ const CalendarDashboard = ({
                   <Box key={event._id} p={4} borderWidth="1px" borderRadius="md">
                     <Flex justifyContent="space-between" alignItems="flex-start">
                       <Box flex="1">
-                        <Heading fontSize="md">{event.eventName}</Heading>
+                        <Heading fontSize="md">
+                          {event.eventName}
+                          {event.recurrenceType && event.recurrenceType !== 'none' && (
+                            <Text as="span" fontSize="xs" ml={2} color="purple.400" fontWeight="normal">
+                              🔁 {event.recurrenceType === 'weekly' ? 'Weekly' : event.recurrenceType === 'biweekly' ? 'Biweekly' : 'Monthly'}
+                            </Text>
+                          )}
+                        </Heading>
                         <Text fontSize="sm" color="gray.500">
                           {new Date(event.eventDate).toLocaleDateString('en-US', { timeZone: 'UTC' })} at {formatEventTime(event)}
+                          {event.recurrenceType && event.recurrenceType !== 'none' && event.recurrenceEndDate && (
+                            <Text as="span" color="gray.600"> → {new Date(event.recurrenceEndDate).toLocaleDateString('en-US', { timeZone: 'UTC' })}</Text>
+                          )}
                         </Text>
                         <Text mt={2}>{event.eventDescription}</Text>
                       </Box>
@@ -502,6 +579,30 @@ const CalendarDashboard = ({
                 <Input name="eventDate" type="date" value={editEventFormData.eventDate} onChange={handleEventEditFormChange} />
               </FormControl>
               <FormControl>
+                <FormLabel>Repeat Event</FormLabel>
+                <Input as="select" name="recurrenceType" value={editEventFormData.recurrenceType} onChange={handleEventEditFormChange}>
+                  <option value="none">Does not repeat</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="biweekly">Every 2 weeks</option>
+                  <option value="monthly">Monthly</option>
+                </Input>
+              </FormControl>
+              {editEventFormData.recurrenceType !== 'none' && (
+                <FormControl>
+                  <FormLabel>Repeat Until</FormLabel>
+                  <Input 
+                    name="recurrenceEndDate" 
+                    type="date" 
+                    value={editEventFormData.recurrenceEndDate} 
+                    onChange={handleEventEditFormChange}
+                    min={editEventFormData.eventDate}
+                  />
+                  <Text fontSize="sm" color="gray.500" mt={1}>
+                    Event will repeat {editEventFormData.recurrenceType === 'weekly' ? 'every week' : editEventFormData.recurrenceType === 'biweekly' ? 'every 2 weeks' : 'every month'} until this date.
+                  </Text>
+                </FormControl>
+              )}
+              <FormControl>
                 <Checkbox 
                   name="isAllDay"
                   isChecked={editEventFormData.isAllDay} 
@@ -550,8 +651,8 @@ const CalendarDashboard = ({
                 />
               </FormControl>
               <FormControl>
-                <FormLabel>Event Description (max 300 characters)</FormLabel>
-                <Textarea name="eventDescription" value={editEventFormData.eventDescription} onChange={handleEventEditFormChange} placeholder="Brief description of the event" maxLength={300} />
+                <FormLabel>Event Description (max 500 characters)</FormLabel>
+                <Textarea name="eventDescription" value={editEventFormData.eventDescription} onChange={handleEventEditFormChange} placeholder="Brief description of the event" maxLength={500} />
               </FormControl>
               <FormControl>
                 <FormLabel>Event Link (optional)</FormLabel>
@@ -566,7 +667,7 @@ const CalendarDashboard = ({
                 <Input
                   ref={editEventImageRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.pdf,application/pdf"
                   onChange={handleEditEventImageChange}
                   sx={{
                     '::file-selector-button': {
@@ -582,19 +683,33 @@ const CalendarDashboard = ({
                   }}
                 />
                 <Text fontSize="sm" color="gray.500" mt={1}>
-                  Max 2MB. Will be displayed when visitors click on the event.
+                  Max 2MB. Accepts images (JPG, PNG) or single-page PDF flyers.
                 </Text>
                 {editEventImagePreview && (
                   <Box position="relative" mt={3} maxW="300px">
-                    <Image
-                      src={editEventImagePreview}
-                      alt="Event preview"
-                      borderRadius="md"
-                      border="1px solid"
-                      borderColor="gray.600"
-                    />
+                    {editEventImagePreview.startsWith('data:application/pdf') ? (
+                      <Box
+                        p={4}
+                        borderRadius="md"
+                        border="1px solid"
+                        borderColor="gray.600"
+                        bg="gray.700"
+                        textAlign="center"
+                      >
+                        <Text fontSize="sm" color="gray.300">PDF Flyer Selected</Text>
+                        <Text fontSize="xs" color="gray.500" mt={1}>Will be displayed to visitors</Text>
+                      </Box>
+                    ) : (
+                      <Image
+                        src={editEventImagePreview}
+                        alt="Event preview"
+                        borderRadius="md"
+                        border="1px solid"
+                        borderColor="gray.600"
+                      />
+                    )}
                     <IconButton
-                      aria-label="Remove image"
+                      aria-label="Remove file"
                       icon={<CloseIcon />}
                       size="sm"
                       colorScheme="red"
