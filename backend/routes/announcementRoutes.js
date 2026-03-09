@@ -6,10 +6,22 @@ const Announcement = require('../models/announcementModel');
 
 // @route   GET /api/announcements
 // @desc    Get all announcements (sorted by most recent first)
+// @desc    Pass ?includeExpired=true to include expired announcements (for admin)
 // @access  Public
 router.get('/', async (req, res) => {
   try {
-    const announcements = await Announcement.find().sort({ createdAt: -1 });
+    const includeExpired = req.query.includeExpired === 'true';
+    let filter = {};
+    if (!includeExpired) {
+      filter = {
+        $or: [
+          { expiresAt: null },
+          { expiresAt: { $exists: false } },
+          { expiresAt: { $gt: new Date() } }
+        ]
+      };
+    }
+    const announcements = await Announcement.find(filter).sort({ createdAt: -1 });
     res.json(announcements);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -33,7 +45,7 @@ router.get('/archived', async (req, res) => {
 // @access  Private (should be protected by auth middleware)
 router.post('/', async (req, res) => {
   try {
-    const { title, content, image } = req.body;
+    const { title, content, image, expiresAt } = req.body;
 
     if (!title || !content) {
       return res.status(400).json({ message: 'Title and content are required' });
@@ -48,7 +60,8 @@ router.post('/', async (req, res) => {
     const announcement = new Announcement({
       title,
       content,
-      image
+      image,
+      expiresAt: expiresAt || null
     });
 
     const createdAnnouncement = await announcement.save();
@@ -63,7 +76,7 @@ router.post('/', async (req, res) => {
 // @access  Private (should be protected by auth middleware)
 router.put('/:id', async (req, res) => {
   try {
-    const { title, content, image } = req.body;
+    const { title, content, image, expiresAt } = req.body;
 
     const announcement = await Announcement.findById(req.params.id);
 
@@ -79,6 +92,7 @@ router.put('/:id', async (req, res) => {
     if (title) announcement.title = title;
     if (content) announcement.content = content;
     if (image !== undefined) announcement.image = image;
+    if (expiresAt !== undefined) announcement.expiresAt = expiresAt || null;
 
     const updatedAnnouncement = await announcement.save();
     res.json(updatedAnnouncement);

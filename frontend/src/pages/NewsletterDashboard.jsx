@@ -16,7 +16,6 @@ import {
   Tr,
   Th,
   Td,
-  TableContainer,
   Spinner,
   Input,
   AlertDialog,
@@ -170,20 +169,23 @@ const NewsletterDashboard = ({
 
   return (
     <>
+      <Flex direction="column" h={{ base: 'auto', lg: 'calc(100vh - 130px)' }} minH="0" overflow="hidden">
       <Grid 
         templateAreas={{
           base: `"compose" "subscribers"`,
           lg: `"compose subscribers"`
         }}
         gridTemplateColumns={{ base: '1fr', lg: '1fr 1fr' }}
+        gridTemplateRows={{ lg: '1fr' }}
         gap={{ base: 4, md: 8 }}
         flex="1" 
         minH="0"
+        overflow="hidden"
       >
-        <GridItem area="compose" display="flex" flexDirection="column" minH="0">
-          <Box p={{ base: 3, md: 5 }} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column" minH="0">
+        <GridItem area="compose" display="flex" flexDirection="column" minH="0" overflow="hidden">
+          <Box p={{ base: 3, md: 5 }} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column" minH="0" overflow="hidden">
             <Heading fontSize={{ base: 'lg', md: 'xl' }} mb={4} flexShrink={0}>Compose Newsletter</Heading>
-            <Box flex="1" minH="0">
+            <Box flex="1" minH="0" overflowY="auto">
               <NewsletterEditor 
                 selectedEmails={getSelectedEmails()}
                 selectedCount={selectedSubscriberIds.size}
@@ -193,8 +195,8 @@ const NewsletterDashboard = ({
           </Box>
         </GridItem>
         
-        <GridItem area="subscribers" display="flex" flexDirection="column" minH="0">
-          <Box p={{ base: 3, md: 5 }} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column" minH="0">
+        <GridItem area="subscribers" display="flex" flexDirection="column" minH="0" overflow="hidden">
+          <Box p={{ base: 3, md: 5 }} shadow="md" borderWidth="1px" borderRadius="md" h="100%" display="flex" flexDirection="column" minH="0" overflow="hidden">
             <Flex justifyContent="space-between" alignItems="center" flexShrink={0} mb={4} flexWrap="wrap" gap={2}>
               <Heading fontSize={{ base: 'lg', md: 'xl' }}>Subscriber Management</Heading>
               <Flex gap={{ base: 1, md: 3 }} alignItems="center" flexWrap="wrap">
@@ -235,7 +237,7 @@ const NewsletterDashboard = ({
                 <Spinner />
               </Flex>
             ) : (
-              <>
+              <Box flex="1" minH="0" display="flex" flexDirection="column" overflow="hidden">
                 {/* Select/Deselect controls */}
                 <Flex mt={4} mb={2} gap={2} alignItems="center" flexShrink={0}>
                   <Button size="xs" colorScheme="blue" variant="outline" onClick={selectAll}>
@@ -250,8 +252,8 @@ const NewsletterDashboard = ({
                     </Text>
                   )}
                 </Flex>
-                <TableContainer flex="1" overflow="auto" minH="0">
-                  <Table variant="simple" minW="600px">
+                <Box flex="1" minH="0" overflowY="auto">
+                  <Table variant="simple" size="sm">
                     <Thead>
                       <Tr>
                         <Th width="40px" px={2}>
@@ -303,12 +305,13 @@ const NewsletterDashboard = ({
                       ))}
                     </Tbody>
                   </Table>
-                </TableContainer>
-              </>
+                </Box>
+              </Box>
             )}
           </Box>
         </GridItem>
       </Grid>
+      </Flex>
 
       {/* Delete Alert Dialog */}
       <AlertDialog isOpen={isDeleteAlertOpen} leastDestructiveRef={cancelRef} onClose={closeDeleteAlert}>

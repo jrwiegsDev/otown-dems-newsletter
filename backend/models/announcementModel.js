@@ -15,6 +15,10 @@ const announcementSchema = new mongoose.Schema({
   image: {
     type: String  // Base64 encoded image data
   },
+  expiresAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

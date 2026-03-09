@@ -4,9 +4,10 @@ import api from '../api/axiosConfig';
 
 const API_URL = '/api/announcements/';
 
-// Get all announcements
-export const getAnnouncements = async () => {
-  const response = await api.get(API_URL);
+// Get all announcements (includeExpired=true for admin view)
+export const getAnnouncements = async ({ includeExpired = false } = {}) => {
+  const params = includeExpired ? '?includeExpired=true' : '';
+  const response = await api.get(API_URL + params);
   return response.data;
 };
 
