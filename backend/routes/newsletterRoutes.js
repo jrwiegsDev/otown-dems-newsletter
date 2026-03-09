@@ -55,6 +55,16 @@ router.post('/send', protect, async (req, res) => {
       }
     }
 
+    // Ensure priority recipient receives the newsletter first
+    const priorityEmail = process.env.PRIORITY_EMAIL_RECIPIENT;
+    if (priorityEmail) {
+      const priorityIndex = recipientEmails.indexOf(priorityEmail);
+      if (priorityIndex > 0) {
+        recipientEmails.splice(priorityIndex, 1);
+        recipientEmails.unshift(priorityEmail);
+      }
+    }
+
     // --- RESPOND TO BROWSER IMMEDIATELY ---
     res.status(200).json({ message: `Newsletter sending initiated to ${recipientEmails.length} recipients!` });
 

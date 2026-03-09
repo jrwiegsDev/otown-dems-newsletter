@@ -9,11 +9,11 @@ export const useAnnouncements = () => {
   const [isLoadingAnnouncements, setIsLoadingAnnouncements] = useState(true);
   const toast = useToast();
 
-  // Fetch all announcements
+  // Fetch all announcements (including expired for admin view)
   const fetchAnnouncements = async () => {
     setIsLoadingAnnouncements(true);
     try {
-      const data = await announcementService.getAnnouncements();
+      const data = await announcementService.getAnnouncements({ includeExpired: true });
       setAnnouncements(data);
     } catch (error) {
       toast({
