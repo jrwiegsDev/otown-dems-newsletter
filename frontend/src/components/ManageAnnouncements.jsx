@@ -31,7 +31,7 @@ import {
   Image,
   useToast,
 } from '@chakra-ui/react';
-import { EditIcon, DeleteIcon, CloseIcon } from '@chakra-ui/icons';
+import { EditIcon, DeleteIcon, CloseIcon, WarningIcon } from '@chakra-ui/icons';
 
 const ManageAnnouncements = ({
   announcements,
@@ -44,6 +44,7 @@ const ManageAnnouncements = ({
   const [content, setContent] = useState('');
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [expiresAt, setExpiresAt] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
   const [editImagePreview, setEditImagePreview] = useState(null);
@@ -157,11 +158,12 @@ const ManageAnnouncements = ({
 
     setIsPosting(true);
     try {
-      await createAnnouncement({ title, content, image });
+      await createAnnouncement({ title, content, image, expiresAt: expiresAt || null });
       setTitle('');
       setContent('');
       setImage(null);
       setImagePreview(null);
+      setExpiresAt('');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -173,7 +175,10 @@ const ManageAnnouncements = ({
   };
 
   const openEditModal = (announcement) => {
-    setEditingAnnouncement(announcement);
+    setEditingAnnouncement({
+      ...announcement,
+      expiresAt: announcement.expiresAt ? announcement.expiresAt.slice(0, 10) : ''
+    });
     setEditImagePreview(announcement.image || null);
     onEditModalOpen();
   };
@@ -186,6 +191,7 @@ const ManageAnnouncements = ({
         title: editingAnnouncement.title,
         content: editingAnnouncement.content,
         image: editingAnnouncement.image,
+        expiresAt: editingAnnouncement.expiresAt || null,
       });
       onEditModalClose();
       setEditingAnnouncement(null);
@@ -284,6 +290,15 @@ const ManageAnnouncements = ({
                 </Box>
               )}
             </Box>
+            <Box width="100%">
+              <Text fontSize="xs" color="gray.500" mb={1}>Expiration Date (optional — announcement auto-hides after this date)</Text>
+              <Input
+                type="date"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                size="sm"
+              />
+            </Box>
             <Button
               type="submit"
               colorScheme="blue"
@@ -325,7 +340,14 @@ const ManageAnnouncements = ({
                     </Text>
                     <Text fontSize="xs" color="gray.500" fontStyle="italic">
                       Posted {new Date(announcement.createdAt).toLocaleDateString()}
+                      {announcement.expiresAt && ` • Expires ${new Date(announcement.expiresAt).toLocaleDateString()}`}
                     </Text>
+                    {announcement.expiresAt && new Date(announcement.expiresAt) < new Date() && (
+                      <HStack spacing={1}>
+                        <WarningIcon color="orange.400" boxSize={3} />
+                        <Text fontSize="xs" color="orange.400" fontWeight="bold">Expired — hidden from public site</Text>
+                      </HStack>
+                    )}
                   </VStack>
                   <HStack spacing={1}>
                     <IconButton
@@ -377,6 +399,17 @@ const ManageAnnouncements = ({
                 })}
                 rows={8}
               />
+              <Box width="100%">
+                <Text fontSize="sm" color="gray.500" mb={1}>Expiration Date (optional)</Text>
+                <Input
+                  type="date"
+                  value={editingAnnouncement?.expiresAt || ''}
+                  onChange={(e) => setEditingAnnouncement({
+                    ...editingAnnouncement,
+                    expiresAt: e.target.value
+                  })}
+                />
+              </Box>
               <Box width="100%">
                 <Text fontSize="sm" color="gray.500" mb={1}>Image/Flyer (optional, max 2MB)</Text>
                 <Input
