@@ -58,6 +58,13 @@ router.get('/', async (req, res) => {
     }
 
     const live = await Announcement.find(liveFilter).sort({ createdAt: -1 });
+
+    // Only the admin view (includeExpired=true) gets archived/past
+    // announcements. The public site should only ever see current ones.
+    if (!includeExpired) {
+      return res.json(live);
+    }
+
     const archived = await ArchivedAnnouncement.find().sort({ originalCreatedAt: -1 });
 
     const archivedAsAnnouncements = archived.map((a) => {
