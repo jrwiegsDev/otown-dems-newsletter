@@ -32,6 +32,11 @@ import {
   Checkbox,
   Input,
   Image,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
   useToast,
 } from '@chakra-ui/react';
 import { DeleteIcon, EditIcon, CloseIcon } from '@chakra-ui/icons';
@@ -67,9 +72,9 @@ const CalendarDashboard = ({
   const toast = useToast();
   const [isEventDeleteAlertOpen, setIsEventDeleteAlertOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState(null);
-  const [showPastEvents, setShowPastEvents] = useState(false);
+  const [eventsTabIndex, setEventsTabIndex] = useState(0); // 0 = Current, 1 = Past
   const [eventsPage, setEventsPage] = useState(1);
-  const EVENTS_PER_PAGE = 10;
+  const EVENTS_PER_PAGE = 5;
   const { isOpen: isEventEditModalOpen, onOpen: onEventEditModalOpen, onClose: onEventEditModalClose } = useDisclosure();
   const { isOpen: isMultiEventModalOpen, onOpen: onMultiEventModalOpen, onClose: onMultiEventModalClose } = useDisclosure();
   const [eventToEdit, setEventToEdit] = useState(null);
@@ -360,8 +365,8 @@ const CalendarDashboard = ({
                   id: event._id,
                   title: event.eventName,
                   date: event.eventDate.slice(0, 10),
-                  backgroundColor: event.isBannerEvent ? 'var(--chakra-colors-yellow-500)' : event.isRecurringInstance ? 'var(--chakra-colors-purple-500)' : 'var(--chakra-colors-blue-500)',
-                  borderColor: event.isBannerEvent ? 'var(--chakra-colors-yellow-600)' : event.isRecurringInstance ? 'var(--chakra-colors-purple-600)' : 'var(--chakra-colors-blue-600)',
+                  backgroundColor: event.isArchived ? 'var(--chakra-colors-gray-500)' : event.isBannerEvent ? 'var(--chakra-colors-yellow-500)' : event.isRecurringInstance ? 'var(--chakra-colors-purple-500)' : 'var(--chakra-colors-blue-500)',
+                  borderColor: event.isArchived ? 'var(--chakra-colors-gray-600)' : event.isBannerEvent ? 'var(--chakra-colors-yellow-600)' : event.isRecurringInstance ? 'var(--chakra-colors-purple-600)' : 'var(--chakra-colors-blue-600)',
                   classNames: event.isBannerEvent ? ['banner-event'] : [],
                   extendedProps: {
                     description: event.eventDescription,
@@ -430,161 +435,157 @@ const CalendarDashboard = ({
         {/* BOTTOM LEFT: Current Events List */}
         <GridItem area="events" display="flex" flexDirection="column">
           <Box p={{ base: 3, md: 5 }} shadow="md" borderWidth="1px" borderRadius="md" display="flex" flexDirection="column" minH={{ base: '300px', md: '500px' }} maxH={{ base: '500px', md: '650px' }}>
-            <Flex justifyContent="space-between" alignItems={{ base: 'flex-start', md: 'center' }} flexDirection={{ base: 'column', md: 'row' }} gap={2} flexShrink={0} mb={3}>
-              <Heading fontSize={{ base: 'md', md: 'lg' }}>
-                {showPastEvents ? 'All Events' : 'Current Events'}
-              </Heading>
-              <Flex alignItems="center" gap={2}>
-                <Text fontSize="sm" whiteSpace="nowrap">Show past events</Text>
-                <Checkbox
-                  isChecked={showPastEvents}
-                  onChange={(e) => {
-                    const next = e.target.checked;
-                    setShowPastEvents(next);
-                    setEventsPage(1);
-                    if (next && !hasLoadedArchivedEvents && fetchArchivedEvents) {
-                      fetchArchivedEvents();
-                    }
-                  }}
-                  colorScheme="purple"
-                />
-              </Flex>
-            </Flex>
+            <Heading fontSize={{ base: 'md', md: 'lg' }} flexShrink={0} mb={3}>Events</Heading>
             {(() => {
-              // Build the displayed list. Upcoming events come from the live
-              // Event collection (filtered to current month onward). Past
-              // events come from BOTH the live collection (anything that has
-              // since passed) and the ArchivedEvent collection (anything that
-              // was deleted).
-              const now = new Date();
-              const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+              // Split events by "today". Anything on or after today is
+              // "Current". Anything before today is "Past" and gets merged
+              // with the archived (already-deleted) events. The backend
+              // auto-archives non-recurring events whose date has passed, so
+              // most past events will come from `archivedEvents`; we still
+              // include any live events whose date is < today as a safety net.
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const isBefore = (d) => {
+                const x = new Date(d);
+                x.setHours(0, 0, 0, 0);
+                return x < today;
+              };
 
-              const upcoming = events.filter(event => new Date(event.eventDate) >= currentMonth);
+              const currentEvents = events.filter(e => !isBefore(e.eventDate) && !e.isArchived);
               const pastFromLive = events
-                .filter(event => new Date(event.eventDate) < currentMonth)
+                .filter(e => isBefore(e.eventDate) && !e.isArchived)
                 .map(e => ({ ...e, _isPast: true, _isArchived: false }));
-              const pastFromArchive = (archivedEvents || []).map(e => ({
-                ...e,
-                _id: `archived_${e._id}`,
-                _isPast: true,
-                _isArchived: true,
-              }));
+              const pastFromArchive = events
+                .filter(e => e.isArchived)
+                .map(e => ({ ...e, _id: `archived_${e._id}`, _isPast: true, _isArchived: true }));
+              const pastEvents = [...pastFromLive, ...pastFromArchive]
+                .sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate));
 
-              const displayed = showPastEvents
-                ? [
-                    ...upcoming,
-                    ...[...pastFromLive, ...pastFromArchive].sort(
-                      (a, b) => new Date(b.eventDate) - new Date(a.eventDate)
-                    ),
-                  ]
-                : upcoming;
-
-              const totalAvailable = events.length + (archivedEvents?.length || 0);
-              const totalPages = Math.max(1, Math.ceil(displayed.length / EVENTS_PER_PAGE));
+              const activeList = eventsTabIndex === 0 ? currentEvents : pastEvents;
+              const totalPages = Math.max(1, Math.ceil(activeList.length / EVENTS_PER_PAGE));
               const safePage = Math.min(eventsPage, totalPages);
               const startIdx = (safePage - 1) * EVENTS_PER_PAGE;
-              const pageItems = displayed.slice(startIdx, startIdx + EVENTS_PER_PAGE);
-              const pageStartLabel = displayed.length === 0 ? 0 : startIdx + 1;
+              const pageItems = activeList.slice(startIdx, startIdx + EVENTS_PER_PAGE);
+              const pageStartLabel = activeList.length === 0 ? 0 : startIdx + 1;
               const pageEndLabel = startIdx + pageItems.length;
 
+              const renderEventCard = (event) => {
+                const isPast = event._isPast || isEventPast(event.eventDate);
+                const isArchived = event._isArchived;
+                return (
+                  <Box
+                    key={event._id}
+                    p={4}
+                    borderWidth="1px"
+                    borderRadius="md"
+                    borderColor={isPast ? 'whiteAlpha.300' : 'inherit'}
+                    bg={isArchived ? 'whiteAlpha.100' : isPast ? 'whiteAlpha.50' : 'transparent'}
+                  >
+                    <Flex justifyContent="space-between" alignItems="flex-start">
+                      <Box flex="1">
+                        <Heading fontSize="md">
+                          {event.eventName}
+                          {isPast && (
+                            <Text as="span" fontSize="xs" ml={2} color="gray.500" fontWeight="normal">
+                              {isArchived ? '📦 Past (deleted)' : '🕓 Past'}
+                            </Text>
+                          )}
+                          {event.recurrenceType && event.recurrenceType !== 'none' && (
+                            <Text as="span" fontSize="xs" ml={2} color="purple.400" fontWeight="normal">
+                              🔁 {event.recurrenceType === 'weekly' ? 'Weekly' : event.recurrenceType === 'biweekly' ? 'Biweekly' : 'Monthly'}
+                            </Text>
+                          )}
+                        </Heading>
+                        <Text fontSize="sm" color="gray.500">
+                          {new Date(event.eventDate).toLocaleDateString('en-US', { timeZone: 'UTC' })} at {formatEventTime(event)}
+                          {event.recurrenceType && event.recurrenceType !== 'none' && event.recurrenceEndDate && (
+                            <Text as="span" color="gray.600"> → {new Date(event.recurrenceEndDate).toLocaleDateString('en-US', { timeZone: 'UTC' })}</Text>
+                          )}
+                        </Text>
+                        <Text mt={2}>{event.eventDescription}</Text>
+                      </Box>
+                      {!isArchived && (
+                        <Flex direction="column" alignItems="flex-end" gap={2}>
+                          <Flex alignItems="center" gap={2}>
+                            <Text fontSize="sm" whiteSpace="nowrap">Banner Event?</Text>
+                            <Checkbox
+                              isChecked={event.isBannerEvent || false}
+                              onChange={() => handleBannerToggle(event)}
+                              isDisabled={isEventPast(event.eventDate)}
+                              colorScheme="blue"
+                            />
+                          </Flex>
+                          <Stack direction="row">
+                            <IconButton icon={<EditIcon />} size="sm" colorScheme="yellow" onClick={() => openEventEditModal(event)} />
+                            <IconButton icon={<DeleteIcon />} size="sm" colorScheme="red" onClick={() => openEventDeleteAlert(event)} />
+                          </Stack>
+                        </Flex>
+                      )}
+                    </Flex>
+                  </Box>
+                );
+              };
+
+              const listScrollStyles = {
+                '&::-webkit-scrollbar': { width: '10px' },
+                '&::-webkit-scrollbar-track': { background: 'gray.100', borderRadius: '4px' },
+                '&::-webkit-scrollbar-thumb': { background: '#a0aec0', borderRadius: '4px' },
+                '&::-webkit-scrollbar-thumb:hover': { background: '#718096' },
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#a0aec0 #edf2f7',
+              };
+
               return (
-                <>
-                  <Text fontSize="xs" color="gray.500" flexShrink={0} mb={2}>
-                    Showing {pageStartLabel}{pageItems.length > 1 ? `–${pageEndLabel}` : ''} of {displayed.length}
-                    {showPastEvents ? ' shown' : ' upcoming'}
-                    {' '}({totalAvailable} total event{totalAvailable === 1 ? '' : 's'})
-                    {!showPastEvents && totalAvailable > displayed.length && ' — toggle "Show past events" to see history'}
-                  </Text>
-                  {isLoadingEvents ? (
-                    <Spinner />
-                  ) : (
-                    <VStack
-                      spacing={4}
-                      align="stretch"
-                      overflowY="auto"
-                      flex="1"
-                      pr={2}
-                      sx={{
-                        // Make the scrollbar always visible so admins know the list scrolls
-                        '&::-webkit-scrollbar': { width: '10px' },
-                        '&::-webkit-scrollbar-track': { background: 'gray.100', borderRadius: '4px' },
-                        '&::-webkit-scrollbar-thumb': { background: '#a0aec0', borderRadius: '4px' },
-                        '&::-webkit-scrollbar-thumb:hover': { background: '#718096' },
-                        scrollbarWidth: 'thin',
-                        scrollbarColor: '#a0aec0 #edf2f7',
-                      }}
-                    >
-                      {showPastEvents && isLoadingArchivedEvents && (
-                        <Flex justifyContent="center" py={2}>
+                <Tabs
+                  index={eventsTabIndex}
+                  onChange={(idx) => {
+                    setEventsTabIndex(idx);
+                    setEventsPage(1);
+                  }}
+                  variant="line"
+                  colorScheme="blue"
+                  display="flex"
+                  flexDirection="column"
+                  flex="1"
+                  minH={0}
+                >
+                  <TabList flexShrink={0}>
+                    <Tab>Current ({currentEvents.length})</Tab>
+                    <Tab>Past ({pastEvents.length})</Tab>
+                  </TabList>
+                  <TabPanels flex="1" display="flex" flexDirection="column" minH={0}>
+                    <TabPanel px={0} pt={3} pb={0} flex="1" display="flex" flexDirection="column" minH={0}>
+                      <Text fontSize="xs" color="gray.500" flexShrink={0} mb={2}>
+                        {activeList.length === 0
+                          ? 'No upcoming events.'
+                          : `Showing ${pageStartLabel}${pageItems.length > 1 ? `–${pageEndLabel}` : ''} of ${activeList.length} upcoming event${activeList.length === 1 ? '' : 's'}`}
+                      </Text>
+                      {isLoadingEvents ? (
+                        <Spinner />
+                      ) : (
+                        <VStack spacing={4} align="stretch" overflowY="auto" flex="1" pr={2} sx={listScrollStyles}>
+                          {pageItems.map(renderEventCard)}
+                        </VStack>
+                      )}
+                    </TabPanel>
+                    <TabPanel px={0} pt={3} pb={0} flex="1" display="flex" flexDirection="column" minH={0}>
+                      <Text fontSize="xs" color="gray.500" flexShrink={0} mb={2}>
+                        {activeList.length === 0
+                          ? 'No past events yet. Events automatically move here the day after they occur, and any events you delete are preserved here.'
+                          : `Showing ${pageStartLabel}${pageItems.length > 1 ? `–${pageEndLabel}` : ''} of ${activeList.length} past event${activeList.length === 1 ? '' : 's'}`}
+                      </Text>
+                      {isLoadingEvents ? (
+                        <Flex justifyContent="center" py={4}>
                           <Spinner size="sm" />
                           <Text ml={2} fontSize="sm" color="gray.500">Loading past events…</Text>
                         </Flex>
+                      ) : (
+                        <VStack spacing={4} align="stretch" overflowY="auto" flex="1" pr={2} sx={listScrollStyles}>
+                          {pageItems.map(renderEventCard)}
+                        </VStack>
                       )}
-                      {pageItems.length === 0 && !isLoadingArchivedEvents && (
-                        <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>
-                          {showPastEvents
-                            ? 'No past events to show yet. Events you delete from now on will appear here.'
-                            : 'No upcoming events.'}
-                        </Text>
-                      )}
-                      {pageItems.map((event) => {
-                        const isPast = event._isPast || isEventPast(event.eventDate);
-                        const isArchived = event._isArchived;
-                        return (
-                          <Box
-                            key={event._id}
-                            p={4}
-                            borderWidth="1px"
-                            borderRadius="md"
-                            opacity={isPast ? 0.75 : 1}
-                            bg={isArchived ? 'gray.50' : 'transparent'}
-                          >
-                            <Flex justifyContent="space-between" alignItems="flex-start">
-                              <Box flex="1">
-                                <Heading fontSize="md">
-                                  {event.eventName}
-                                  {isPast && (
-                                    <Text as="span" fontSize="xs" ml={2} color="gray.500" fontWeight="normal">
-                                      {isArchived ? '📦 Past (deleted)' : '🕓 Past'}
-                                    </Text>
-                                  )}
-                                  {event.recurrenceType && event.recurrenceType !== 'none' && (
-                                    <Text as="span" fontSize="xs" ml={2} color="purple.400" fontWeight="normal">
-                                      🔁 {event.recurrenceType === 'weekly' ? 'Weekly' : event.recurrenceType === 'biweekly' ? 'Biweekly' : 'Monthly'}
-                                    </Text>
-                                  )}
-                                </Heading>
-                                <Text fontSize="sm" color="gray.500">
-                                  {new Date(event.eventDate).toLocaleDateString('en-US', { timeZone: 'UTC' })} at {formatEventTime(event)}
-                                  {event.recurrenceType && event.recurrenceType !== 'none' && event.recurrenceEndDate && (
-                                    <Text as="span" color="gray.600"> → {new Date(event.recurrenceEndDate).toLocaleDateString('en-US', { timeZone: 'UTC' })}</Text>
-                                  )}
-                                </Text>
-                                <Text mt={2}>{event.eventDescription}</Text>
-                              </Box>
-                              {!isArchived && (
-                                <Flex direction="column" alignItems="flex-end" gap={2}>
-                                  <Flex alignItems="center" gap={2}>
-                                    <Text fontSize="sm" whiteSpace="nowrap">Banner Event?</Text>
-                                    <Checkbox
-                                      isChecked={event.isBannerEvent || false}
-                                      onChange={() => handleBannerToggle(event)}
-                                      isDisabled={isEventPast(event.eventDate)}
-                                      colorScheme="blue"
-                                    />
-                                  </Flex>
-                                  <Stack direction="row">
-                                    <IconButton icon={<EditIcon />} size="sm" colorScheme="yellow" onClick={() => openEventEditModal(event)} />
-                                    <IconButton icon={<DeleteIcon />} size="sm" colorScheme="red" onClick={() => openEventDeleteAlert(event)} />
-                                  </Stack>
-                                </Flex>
-                              )}
-                            </Flex>
-                          </Box>
-                        );
-                      })}
-                    </VStack>
-                  )}
+                    </TabPanel>
+                  </TabPanels>
                   {totalPages > 1 && (
                     <Flex justifyContent="center" alignItems="center" gap={2} pt={3} flexShrink={0}>
                       <Button
@@ -617,7 +618,7 @@ const CalendarDashboard = ({
                       </Button>
                     </Flex>
                   )}
-                </>
+                </Tabs>
               );
             })()}
           </Box>
