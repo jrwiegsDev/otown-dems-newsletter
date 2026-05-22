@@ -20,6 +20,17 @@ const getRawEvents = async (token) => {
   return response.data;
 };
 
+// Get archived (previously deleted) events for the historical log
+const getArchivedEvents = async (token) => {
+  const config = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+  const response = await api.get(API_URL + 'archived', config);
+  return response.data;
+};
+
 // Create a new event
 const createEvent = async (eventData, token) => {
   const config = {
@@ -56,6 +67,7 @@ const eventService = {
   createEvent,
   getAllEvents,
   getRawEvents,
+  getArchivedEvents,
   updateEvent,
   deleteEvent,
   toggleBannerEvent,

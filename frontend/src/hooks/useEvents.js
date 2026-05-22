@@ -5,6 +5,9 @@ import { useToast } from '@chakra-ui/react';
 const useEvents = (user) => {
   const [events, setEvents] = useState([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [archivedEvents, setArchivedEvents] = useState([]);
+  const [isLoadingArchivedEvents, setIsLoadingArchivedEvents] = useState(false);
+  const [hasLoadedArchivedEvents, setHasLoadedArchivedEvents] = useState(false);
   const toast = useToast();
 
   // Fetch all events (raw, non-expanded for admin management)
@@ -35,13 +38,41 @@ const useEvents = (user) => {
     }
   }, [user]);
 
+  // Fetch archived events (lazy - only when needed)
+  const fetchArchivedEvents = async () => {
+    if (!user) return;
+    setIsLoadingArchivedEvents(true);
+    try {
+      const data = await eventService.getArchivedEvents(user.token);
+      setArchivedEvents(data);
+      setHasLoadedArchivedEvents(true);
+    } catch (error) {
+      console.error('Failed to fetch archived events', error);
+      toast({
+        title: 'Error loading past events',
+        description: 'Could not load past events. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoadingArchivedEvents(false);
+    }
+  };
+
   // Delete event
   const deleteEvent = async (eventId) => {
     try {
       await eventService.deleteEvent(eventId, user.token);
       setEvents(events.filter((event) => event._id !== eventId));
+      // Refresh archived events list if it's already been loaded so the
+      // deleted event shows up in the past-events view immediately.
+      if (hasLoadedArchivedEvents) {
+        fetchArchivedEvents();
+      }
       toast({ 
         title: 'Event Deleted', 
+        description: 'The event has been moved to past events.',
         status: 'success', 
         duration: 3000, 
         isClosable: true 
@@ -164,6 +195,10 @@ const useEvents = (user) => {
     events,
     isLoadingEvents,
     fetchEvents,
+    archivedEvents,
+    isLoadingArchivedEvents,
+    hasLoadedArchivedEvents,
+    fetchArchivedEvents,
     deleteEvent,
     updateEvent,
     toggleBannerEvent,

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Event = require('../models/eventModel');
+const ArchivedEvent = require('../models/archivedEventModel');
 const { protect } = require('../middleware/authMiddleware');
 
 // Helper function to generate recurring event instances
@@ -218,10 +219,34 @@ router.delete('/:id', protect, async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // Permanently delete the event (including any image data)
+    // Archive the event before deleting so it stays in the historical log
+    try {
+      await ArchivedEvent.create({
+        eventName: event.eventName,
+        eventDate: event.eventDate,
+        eventTime: event.eventTime,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        isAllDay: event.isAllDay,
+        eventDescription: event.eventDescription,
+        eventLocation: event.eventLocation,
+        eventCoordinates: event.eventCoordinates,
+        eventLink: event.eventLink,
+        eventLinkText: event.eventLinkText,
+        eventImage: event.eventImage,
+        isBannerEvent: false, // never archive as a banner
+        originalCreatedAt: event.createdAt,
+        originalUpdatedAt: event.updatedAt,
+        originalId: event._id,
+      });
+    } catch (archiveErr) {
+      console.error('Failed to archive event before delete:', archiveErr);
+      // Continue with deletion even if archive fails so the admin action still works
+    }
+
     await event.deleteOne();
-    
-    res.json({ message: 'Event deleted successfully' });
+
+    res.json({ message: 'Event deleted and archived successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }
