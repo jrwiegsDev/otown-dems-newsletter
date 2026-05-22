@@ -4,6 +4,67 @@ const Event = require('../models/eventModel');
 const ArchivedEvent = require('../models/archivedEventModel');
 const { protect } = require('../middleware/authMiddleware');
 
+// Auto-archive any past events. A non-recurring event is "past" once its
+// eventDate is before today. A recurring event is "past" only once its
+// recurrenceEndDate is before today (so we don't archive an active series
+// just because the first instance has happened). Runs on every read route
+// so the Past tab always reflects reality without needing a cron job.
+const archivePastEvents = async () => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const pastEvents = await Event.find({
+      $or: [
+        // Non-recurring: simply past its date
+        {
+          $and: [
+            { eventDate: { $lt: today } },
+            { $or: [{ recurrenceType: { $exists: false } }, { recurrenceType: 'none' }, { recurrenceType: null }] },
+          ],
+        },
+        // Recurring with an end date that has passed
+        {
+          $and: [
+            { recurrenceType: { $in: ['weekly', 'biweekly', 'monthly'] } },
+            { recurrenceEndDate: { $ne: null, $lt: today } },
+          ],
+        },
+      ],
+    });
+
+    if (pastEvents.length === 0) return;
+
+    for (const event of pastEvents) {
+      try {
+        await ArchivedEvent.create({
+          eventName: event.eventName,
+          eventDate: event.eventDate,
+          eventTime: event.eventTime,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          isAllDay: event.isAllDay,
+          eventDescription: event.eventDescription,
+          eventLocation: event.eventLocation,
+          eventCoordinates: event.eventCoordinates,
+          eventLink: event.eventLink,
+          eventLinkText: event.eventLinkText,
+          eventImage: event.eventImage,
+          isBannerEvent: false,
+          originalCreatedAt: event.createdAt,
+          originalUpdatedAt: event.updatedAt,
+          originalId: event._id,
+        });
+        await event.deleteOne();
+      } catch (innerErr) {
+        console.error(`Failed to auto-archive event ${event._id}:`, innerErr);
+      }
+    }
+  } catch (err) {
+    console.error('archivePastEvents failed:', err);
+  }
+};
+
 // Helper function to generate recurring event instances
 const generateRecurringInstances = (event, maxDate) => {
   const instances = [];
@@ -57,15 +118,17 @@ const generateRecurringInstances = (event, maxDate) => {
   return instances;
 };
 
-// Get all events (Public) - expands recurring events
+// Get all events (Public) - expands recurring events and includes archived
+// past events so the public calendar continues to show event history.
 router.get('/', async (req, res) => {
   try {
+    await archivePastEvents();
     const events = await Event.find().sort({ eventDate: 1 });
-    
+
     // Calculate max date for recurring events (6 months from now)
     const maxDate = new Date();
     maxDate.setMonth(maxDate.getMonth() + 6);
-    
+
     // Expand recurring events into instances
     const expandedEvents = [];
     for (const event of events) {
@@ -76,21 +139,50 @@ router.get('/', async (req, res) => {
         expandedEvents.push(event);
       }
     }
-    
-    // Sort by event date
-    expandedEvents.sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
-    
-    res.json(expandedEvents);
+
+    // Include archived (past) events so they still appear on the public
+    // calendar. Strip admin-only fields (banner) and never let archived
+    // events be treated as banner events.
+    const archived = await ArchivedEvent.find().sort({ eventDate: 1 });
+    const archivedAsEvents = archived.map((a) => {
+      const obj = a.toObject();
+      return {
+        ...obj,
+        _id: a.originalId || a._id,
+        isBannerEvent: false,
+        isArchived: true,
+      };
+    });
+
+    const allEvents = [...expandedEvents, ...archivedAsEvents];
+    allEvents.sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
+
+    res.json(allEvents);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }
 });
 
-// Get raw events without expansion (for admin editing)
+// Get raw events without expansion (for admin editing). Includes archived
+// past events (flagged with isArchived: true) so the admin calendar shows
+// the full history alongside upcoming events.
 router.get('/raw', protect, async (req, res) => {
   try {
-    const events = await Event.find().sort({ eventDate: 1 });
-    res.json(events);
+    await archivePastEvents();
+    const [events, archived] = await Promise.all([
+      Event.find().sort({ eventDate: 1 }),
+      ArchivedEvent.find().sort({ eventDate: 1 }),
+    ]);
+    const archivedAsEvents = archived.map((a) => {
+      const obj = a.toObject();
+      return {
+        ...obj,
+        _id: a.originalId || a._id,
+        isBannerEvent: false,
+        isArchived: true,
+      };
+    });
+    res.json([...events, ...archivedAsEvents]);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }
@@ -101,6 +193,7 @@ router.get('/raw', protect, async (req, res) => {
 // @access Private
 router.get('/archived', protect, async (req, res) => {
   try {
+    await archivePastEvents();
     const archivedEvents = await ArchivedEvent.find().sort({ archivedAt: -1 });
     res.json(archivedEvents);
   } catch (error) {

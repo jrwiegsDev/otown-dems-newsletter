@@ -30,8 +30,16 @@ import {
   useColorModeValue,
   Image,
   useToast,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  Flex,
 } from '@chakra-ui/react';
 import { EditIcon, DeleteIcon, CloseIcon, WarningIcon } from '@chakra-ui/icons';
+
+const ANNOUNCEMENTS_PER_PAGE = 5;
 
 const ManageAnnouncements = ({
   announcements,
@@ -49,6 +57,8 @@ const ManageAnnouncements = ({
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
   const [editImagePreview, setEditImagePreview] = useState(null);
   const [announcementToDelete, setAnnouncementToDelete] = useState(null);
+  const [tabIndex, setTabIndex] = useState(0);
+  const [page, setPage] = useState(1);
   
   const fileInputRef = useRef(null);
   const editFileInputRef = useRef(null);
@@ -314,27 +324,57 @@ const ManageAnnouncements = ({
 
         <Divider />
 
-        {/* Announcements List */}
-        <VStack spacing={2} align="stretch" flex="1" overflowY="auto">
-          <Heading size="sm">Current Announcements ({announcements.length})</Heading>
-          
-          {isLoadingAnnouncements ? (
-            <Spinner />
-          ) : announcements.length === 0 ? (
-            <Text color="gray.500" fontSize="sm" fontStyle="italic">No announcements yet</Text>
-          ) : (
-            announcements.map((announcement) => (
+        {/* Announcements List — Tabs (Current / Past) with pagination */}
+        {(() => {
+          const now = new Date();
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+          const currentAnnouncements = (announcements || []).filter((a) => {
+            if (a.isArchived) return false;
+            return new Date(a.createdAt) >= startOfMonth;
+          });
+          const pastAnnouncements = (announcements || []).filter((a) => {
+            if (a.isArchived) return true;
+            return new Date(a.createdAt) < startOfMonth;
+          });
+
+          const activeList = tabIndex === 0 ? currentAnnouncements : pastAnnouncements;
+          const totalPages = Math.max(1, Math.ceil(activeList.length / ANNOUNCEMENTS_PER_PAGE));
+          const safePage = Math.min(page, totalPages);
+          const startIdx = (safePage - 1) * ANNOUNCEMENTS_PER_PAGE;
+          const pageItems = activeList.slice(startIdx, startIdx + ANNOUNCEMENTS_PER_PAGE);
+          const pageStartLabel = activeList.length === 0 ? 0 : startIdx + 1;
+          const pageEndLabel = startIdx + pageItems.length;
+
+          const listScrollStyles = {
+            '&::-webkit-scrollbar': { width: '10px' },
+            '&::-webkit-scrollbar-track': { background: 'gray.100', borderRadius: '4px' },
+            '&::-webkit-scrollbar-thumb': { background: '#a0aec0', borderRadius: '4px' },
+            '&::-webkit-scrollbar-thumb:hover': { background: '#718096' },
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#a0aec0 #edf2f7',
+          };
+
+          const renderCard = (announcement) => {
+            const isArchived = announcement.isArchived;
+            return (
               <Box
                 key={announcement._id}
                 p={3}
                 border="1px"
-                borderColor={borderColor}
+                borderColor={isArchived ? 'whiteAlpha.300' : borderColor}
                 borderRadius="md"
-                _hover={{ bg: hoverBg }}
+                bg={isArchived ? 'whiteAlpha.100' : 'transparent'}
+                _hover={!isArchived ? { bg: hoverBg } : undefined}
               >
                 <HStack justify="space-between" align="start">
                   <VStack align="start" spacing={1} flex="1">
-                    <Text fontWeight="bold" fontSize="sm">{announcement.title}</Text>
+                    <HStack spacing={2} flexWrap="wrap">
+                      <Text fontWeight="bold" fontSize="sm">{announcement.title}</Text>
+                      {isArchived && (
+                        <Text fontSize="xs" color="gray.500" fontWeight="normal">📦 Past</Text>
+                      )}
+                    </HStack>
                     <Text fontSize="xs" color="gray.600" noOfLines={2}>
                       {announcement.content}
                     </Text>
@@ -342,36 +382,103 @@ const ManageAnnouncements = ({
                       Posted {new Date(announcement.createdAt).toLocaleDateString()}
                       {announcement.expiresAt && ` • Expires ${new Date(announcement.expiresAt).toLocaleDateString()}`}
                     </Text>
-                    {announcement.expiresAt && new Date(announcement.expiresAt) < new Date() && (
+                    {!isArchived && announcement.expiresAt && new Date(announcement.expiresAt) < new Date() && (
                       <HStack spacing={1}>
                         <WarningIcon color="orange.400" boxSize={3} />
                         <Text fontSize="xs" color="orange.400" fontWeight="bold">Expired — hidden from public site</Text>
                       </HStack>
                     )}
                   </VStack>
-                  <HStack spacing={1}>
-                    <IconButton
-                      icon={<EditIcon />}
-                      size="sm"
-                      colorScheme="yellow"
-                      variant="ghost"
-                      onClick={() => openEditModal(announcement)}
-                      aria-label="Edit announcement"
-                    />
-                    <IconButton
-                      icon={<DeleteIcon />}
-                      size="sm"
-                      colorScheme="red"
-                      variant="ghost"
-                      onClick={() => openDeleteAlert(announcement)}
-                      aria-label="Delete announcement"
-                    />
-                  </HStack>
+                  {!isArchived && (
+                    <HStack spacing={1}>
+                      <IconButton
+                        icon={<EditIcon />}
+                        size="sm"
+                        colorScheme="yellow"
+                        variant="ghost"
+                        onClick={() => openEditModal(announcement)}
+                        aria-label="Edit announcement"
+                      />
+                      <IconButton
+                        icon={<DeleteIcon />}
+                        size="sm"
+                        colorScheme="red"
+                        variant="ghost"
+                        onClick={() => openDeleteAlert(announcement)}
+                        aria-label="Delete announcement"
+                      />
+                    </HStack>
+                  )}
                 </HStack>
               </Box>
-            ))
-          )}
-        </VStack>
+            );
+          };
+
+          return (
+            <Tabs
+              index={tabIndex}
+              onChange={(idx) => { setTabIndex(idx); setPage(1); }}
+              variant="line"
+              colorScheme="blue"
+              display="flex"
+              flexDirection="column"
+              flex="1"
+              minH={0}
+            >
+              <TabList flexShrink={0}>
+                <Tab>Current ({currentAnnouncements.length})</Tab>
+                <Tab>Past ({pastAnnouncements.length})</Tab>
+              </TabList>
+              <TabPanels flex="1" display="flex" flexDirection="column" minH={0}>
+                <TabPanel px={0} pt={3} pb={0} flex="1" display="flex" flexDirection="column" minH={0}>
+                  <Text fontSize="xs" color="gray.500" flexShrink={0} mb={2}>
+                    {activeList.length === 0
+                      ? 'No announcements this month yet.'
+                      : `Showing ${pageStartLabel}${pageItems.length > 1 ? `–${pageEndLabel}` : ''} of ${activeList.length} current announcement${activeList.length === 1 ? '' : 's'}`}
+                  </Text>
+                  {isLoadingAnnouncements ? (
+                    <Spinner />
+                  ) : (
+                    <VStack spacing={2} align="stretch" overflowY="auto" flex="1" pr={2} sx={listScrollStyles}>
+                      {pageItems.map(renderCard)}
+                    </VStack>
+                  )}
+                </TabPanel>
+                <TabPanel px={0} pt={3} pb={0} flex="1" display="flex" flexDirection="column" minH={0}>
+                  <Text fontSize="xs" color="gray.500" flexShrink={0} mb={2}>
+                    {activeList.length === 0
+                      ? 'No past announcements yet. Announcements automatically move here at the start of each new month, and any you delete are preserved here too.'
+                      : `Showing ${pageStartLabel}${pageItems.length > 1 ? `–${pageEndLabel}` : ''} of ${activeList.length} past announcement${activeList.length === 1 ? '' : 's'}`}
+                  </Text>
+                  {isLoadingAnnouncements ? (
+                    <Spinner />
+                  ) : (
+                    <VStack spacing={2} align="stretch" overflowY="auto" flex="1" pr={2} sx={listScrollStyles}>
+                      {pageItems.map(renderCard)}
+                    </VStack>
+                  )}
+                </TabPanel>
+              </TabPanels>
+              {totalPages > 1 && (
+                <Flex justifyContent="center" alignItems="center" gap={2} pt={3} flexShrink={0}>
+                  <Button size="xs" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} isDisabled={safePage === 1}>Prev</Button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                    <Button
+                      key={n}
+                      size="xs"
+                      variant={n === safePage ? 'solid' : 'outline'}
+                      colorScheme={n === safePage ? 'blue' : 'gray'}
+                      onClick={() => setPage(n)}
+                    >
+                      {n}
+                    </Button>
+                  ))}
+                  <Button size="xs" variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} isDisabled={safePage === totalPages}>Next</Button>
+                </Flex>
+              )}
+            </Tabs>
+          );
+        })()}
       </VStack>
 
       {/* Edit Modal */}

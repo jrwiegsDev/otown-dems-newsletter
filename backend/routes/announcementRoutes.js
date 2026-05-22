@@ -3,17 +3,52 @@
 const express = require('express');
 const router = express.Router();
 const Announcement = require('../models/announcementModel');
+const ArchivedAnnouncement = require('../models/archivedAnnouncementModel');
+
+// Auto-archive any announcements created in a previous calendar month.
+// As soon as the month rolls over, anything from prior months gets copied
+// into ArchivedAnnouncement and removed from the live collection.
+const archivePastMonthAnnouncements = async () => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const past = await Announcement.find({ createdAt: { $lt: startOfMonth } });
+    if (past.length === 0) return;
+
+    for (const a of past) {
+      try {
+        await ArchivedAnnouncement.create({
+          title: a.title,
+          content: a.content,
+          image: a.image,
+          originalCreatedAt: a.createdAt,
+          originalId: a._id,
+        });
+        await a.deleteOne();
+      } catch (innerErr) {
+        console.error(`Failed to auto-archive announcement ${a._id}:`, innerErr);
+      }
+    }
+  } catch (err) {
+    console.error('archivePastMonthAnnouncements failed:', err);
+  }
+};
 
 // @route   GET /api/announcements
-// @desc    Get all announcements (sorted by most recent first)
-// @desc    Pass ?includeExpired=true to include expired announcements (for admin)
+// @desc    Get all announcements (sorted by most recent first). Includes
+// @desc    archived (past-month or deleted) announcements tagged with
+// @desc    isArchived: true so the admin can split Current vs Past.
+// @desc    Pass ?includeExpired=true to include expired announcements (for admin).
 // @access  Public
 router.get('/', async (req, res) => {
   try {
+    await archivePastMonthAnnouncements();
     const includeExpired = req.query.includeExpired === 'true';
-    let filter = {};
+
+    let liveFilter = {};
     if (!includeExpired) {
-      filter = {
+      liveFilter = {
         $or: [
           { expiresAt: null },
           { expiresAt: { $exists: false } },
@@ -21,18 +56,36 @@ router.get('/', async (req, res) => {
         ]
       };
     }
-    const announcements = await Announcement.find(filter).sort({ createdAt: -1 });
-    res.json(announcements);
+
+    const live = await Announcement.find(liveFilter).sort({ createdAt: -1 });
+    const archived = await ArchivedAnnouncement.find().sort({ originalCreatedAt: -1 });
+
+    const archivedAsAnnouncements = archived.map((a) => {
+      const obj = a.toObject();
+      return {
+        ...obj,
+        _id: a.originalId || a._id,
+        createdAt: a.originalCreatedAt,
+        isArchived: true,
+      };
+    });
+
+    const merged = [...live, ...archivedAsAnnouncements].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    res.json(merged);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
 // @route   GET /api/announcements/archived
-// @desc    Get all archived announcements
+// @desc    Get all archived announcements (raw)
 // @access  Private (should be protected by auth middleware)
 router.get('/archived', async (req, res) => {
   try {
+    await archivePastMonthAnnouncements();
     const archivedAnnouncements = await ArchivedAnnouncement.find().sort({ archivedAt: -1 });
     res.json(archivedAnnouncements);
   } catch (error) {
@@ -102,7 +155,9 @@ router.put('/:id', async (req, res) => {
 });
 
 // @route   DELETE /api/announcements/:id
-// @desc    Permanently delete an announcement
+// @desc    Archive (preserve) the announcement, then remove from the live
+// @desc    collection. Deleted announcements show up in the Past tab so
+// @desc    nothing is permanently lost.
 // @access  Private (should be protected by auth middleware)
 router.delete('/:id', async (req, res) => {
   try {
@@ -112,10 +167,21 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Announcement not found' });
     }
 
-    // Permanently delete the announcement (including any image data)
+    try {
+      await ArchivedAnnouncement.create({
+        title: announcement.title,
+        content: announcement.content,
+        image: announcement.image,
+        originalCreatedAt: announcement.createdAt,
+        originalId: announcement._id,
+      });
+    } catch (archiveErr) {
+      console.error(`Failed to archive announcement ${announcement._id} on delete:`, archiveErr);
+    }
+
     await announcement.deleteOne();
-    
-    res.json({ message: 'Announcement deleted successfully' });
+
+    res.json({ message: 'Announcement archived successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
