@@ -1,8 +1,20 @@
-# O'Town Dems Newsletter & Community Hub
+# O'Town Dems Newsletter - Backend API & Admin Dashboard
 
-A comprehensive full-stack web application built for the O'Fallon Area Democratic Club to manage email newsletters, track events, conduct weekly polls, and engage their community.
+**This is the backend.** A Node.js/Express REST and WebSocket API, MongoDB data model, and SMTP email pipeline (MailerSend) that powered the O'Fallon Area Democratic Club's newsletter and public website, plus the password-protected React admin dashboard staff used to run it. The public-facing frontend lives in [otown-dems-hub](https://github.com/jrwiegsDev/otown-dems-hub).
 
 ![App Screenshot](/frontend/public/newsletter.png) 
+
+---
+
+## Status: sunset September 2026
+
+This project is archived and no longer running. The API, admin dashboard, and email sending were in production from October 2025 to September 2026. The code is kept here, read-only, for reference.
+
+- **Operating period:** October 1, 2025 – September 23, 2026
+- **Mailing list:** grew from 118 contacts at launch to 179 subscribers
+- **Email delivered:** 3,233 emails via MailerSend in the final six months alone (April – September 2026; earlier volume is past the provider's retention window)
+- **Weekly community poll:** 42 weeks of results aggregated and archived
+- **Events:** 26+ managed through the admin calendar
 
 ---
 
@@ -135,24 +147,39 @@ otown-dems-newsletter/
 Create a `.env` file in the `backend` directory:
 
 ```env
+# Server
+PORT=8000
+
 # Database
 MONGO_URI=your_mongodb_connection_string
 
 # Authentication
 JWT_SECRET=your_jwt_secret_key
 
-# Email Configuration
-EMAIL_USER=your_sending_gmail_address
-EMAIL_PASS=your_16_character_gmail_app_password
+# Email (any SMTP provider; production used MailerSend)
+EMAIL_HOST=smtp.mailersend.net
+EMAIL_PORT=587
+EMAIL_USER=your_smtp_username
+EMAIL_PASS=your_smtp_password
 
 # Environment
 NODE_ENV=development
 
-# Testing
-TEST_EMAIL_RECIPIENT=your_personal_test_email
+# Optional email routing
+TEST_EMAIL_RECIPIENT=your_test_inbox          # development: newsletters go only to this address
+VOLUNTEER_TEST_EMAIL=your_test_inbox          # development: volunteer emails go only to this address
+PRIORITY_EMAIL_RECIPIENT=an_address_to_send_first   # moved to the front of every send
 ```
 
-**Note:** For Gmail, you'll need to generate an [App Password](https://support.google.com/accounts/answer/185833) (not your regular Gmail password).
+Create a `.env` file in the `frontend` directory:
+
+```env
+VITE_API_URL=http://localhost:8000
+VITE_WS_URL=ws://localhost:8000
+VITE_GOOGLE_MAPS_API_KEY=your_maps_key   # event location autocomplete
+```
+
+**Note:** SMTP uses STARTTLS on port 587 (`secure: false` in Nodemailer). Newsletters are sent one recipient at a time, 15 seconds apart, to stay within provider rate limits.
 
 ---
 
@@ -161,7 +188,7 @@ TEST_EMAIL_RECIPIENT=your_personal_test_email
 ### Prerequisites
 * Node.js (v16 or higher)
 * MongoDB (local or Atlas)
-* Gmail account with App Password
+* SMTP credentials (production used MailerSend)
 
 ### Installation Steps
 
@@ -191,49 +218,79 @@ TEST_EMAIL_RECIPIENT=your_personal_test_email
 4. **Seed Database (Optional):**
    ```bash
    cd backend
-   node utils/seeder.js
+   npm run data:import
    ```
+   Loads placeholder users and subscribers from `backend/data/`. **This deletes all existing users and subscribers first**, so only run it against a local database.
 
 ---
 
 ## API Endpoints
 
-### Authentication
-* `POST /api/users/login` - Admin login
-* `GET /api/users/profile` - Get user profile (protected)
+"Protected" routes require a JWT (`Authorization: Bearer <token>`). "Superadmin" routes also require the superadmin role. Public form endpoints are rate-limited and use a honeypot field and submission-timing check to block spam.
+
+### Authentication & Staff
+* `POST /api/users/login` - Staff login, returns a 30-day JWT (public)
+* `POST /api/users/change-password` - Change own password (protected)
+* `GET /api/users/staff` - List staff accounts (superadmin)
+* `POST /api/users/staff` - Create staff account (superadmin)
+* `PUT /api/users/staff/:id` - Update staff account (superadmin)
+* `DELETE /api/users/staff/:id` - Delete staff account (superadmin)
+* `POST /api/users/staff/:id/reset-password` - Reset a staff password (superadmin)
 
 ### Subscribers
 * `GET /api/subscribers` - Get all subscribers (protected)
-* `POST /api/subscribers` - Add new subscriber (protected)
+* `POST /api/subscribers` - Subscribe, or update name if the email already exists (public, spam-protected)
+* `PUT /api/subscribers/:id` - Update subscriber (protected)
 * `DELETE /api/subscribers/:id` - Delete subscriber (protected)
 
 ### Newsletter
-* `POST /api/newsletter/send` - Send newsletter to all subscribers (protected)
+* `POST /api/newsletter/send` - Send newsletter to all or selected subscribers (protected)
+* `GET /api/newsletter/drafts` - List drafts (protected)
+* `GET /api/newsletter/drafts/:id` - Get draft (protected)
+* `POST /api/newsletter/drafts` - Save draft (protected)
+* `PUT /api/newsletter/drafts/:id` - Update draft (protected)
+* `DELETE /api/newsletter/drafts/:id` - Delete draft (protected)
 
 ### Events
-* `GET /api/events` - Get all events
+* `GET /api/events` - Get calendar events: recurring events expanded up to 6 months out, past events included (public)
+* `GET /api/events/raw` - Get stored event records (protected)
+* `GET /api/events/archived` - Get archived events (protected)
 * `POST /api/events` - Create event (protected)
 * `PUT /api/events/:id` - Update event (protected)
+* `PUT /api/events/:id/banner` - Set banner event (protected)
 * `DELETE /api/events/:id` - Delete event (protected)
+
+### Announcements
+* `GET /api/announcements` - Get announcements (public)
+* `GET /api/announcements/archived` - Get archived announcements
+* `POST /api/announcements` - Create announcement
+* `PUT /api/announcements/:id` - Update announcement
+* `DELETE /api/announcements/:id` - Delete announcement
 
 ### Poll System
 * `GET /api/poll/active-issues` - Get active poll issues (public)
+* `POST /api/poll/check-email` - Check if an email has voted this week (public)
+* `POST /api/poll/vote` - Submit poll vote; emails are stored only as hashes (public, spam-protected)
+* `GET /api/poll/results` - Get current week results (public)
+* `GET /api/poll/analytics` - Get historical weekly analytics (public)
 * `GET /api/poll/all-issues` - Get all issues including inactive (protected)
-* `POST /api/poll/vote` - Submit poll vote (public, email required)
-* `POST /api/poll/check-email` - Check if email has voted this week (public)
-* `GET /api/poll/results` - Get current week results (protected)
-* `GET /api/poll/analytics/:weeks` - Get historical analytics (protected)
 * `POST /api/poll/update-active-issues` - Toggle issues on/off (protected)
 * `POST /api/poll/add-issue` - Add new poll issue (protected)
 * `PUT /api/poll/edit-issue` - Edit issue name (protected)
 * `DELETE /api/poll/delete-issue` - Delete issue (protected)
+* `POST /api/poll/archive-completed-week` - Archive the finished week's results (protected)
 * `POST /api/poll/reset-week` - Emergency reset current week (protected)
-* `GET /api/poll/monthly-export/:year/:month` - Export CSV (protected)
+* `GET /api/poll/monthly-export/:year/:month` - Export vote totals as CSV (protected)
 
 ### Volunteers
 * `GET /api/volunteers` - Get all volunteers (protected)
-* `POST /api/volunteers` - Add volunteer (protected)
+* `POST /api/volunteers` - Volunteer sign-up; emails the club and the volunteer (public, spam-protected)
+* `PUT /api/volunteers/:id` - Update volunteer (protected)
 * `DELETE /api/volunteers/:id` - Delete volunteer (protected)
+
+### Site Config
+* `GET /api/config/snowfall` - Get seasonal snowfall toggle (public)
+* `POST /api/config/snowfall` - Set snowfall toggle, broadcast to clients over WebSocket (superadmin)
 
 ---
 
