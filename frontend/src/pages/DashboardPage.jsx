@@ -15,7 +15,7 @@ const DashboardPage = () => {
   // Use custom hooks for data management
   const subscriberHook = useSubscribers(user);
   const eventHook = useEvents(user);
-  const announcementHook = useAnnouncements();
+  const announcementHook = useAnnouncements(user);
 
   // State for dashboard view - now supports 4 views
   const [currentView, setCurrentView] = useState('newsletter');

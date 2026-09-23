@@ -262,10 +262,12 @@ VITE_GOOGLE_MAPS_API_KEY=your_maps_key   # event location autocomplete
 
 ### Announcements
 * `GET /api/announcements` - Get announcements (public)
-* `GET /api/announcements/archived` - Get archived announcements
-* `POST /api/announcements` - Create announcement
-* `PUT /api/announcements/:id` - Update announcement
-* `DELETE /api/announcements/:id` - Delete announcement
+* `GET /api/announcements/archived` - Get archived announcements (protected)
+* `POST /api/announcements` - Create announcement (protected)
+* `PUT /api/announcements/:id` - Update announcement (protected)
+* `DELETE /api/announcements/:id` - Delete announcement (protected)
+
+> **Known issue (fixed at sunset):** While in production, the announcement write routes and archived list were missing the `protect` middleware, and the admin UI sent no token for them, so they accepted unauthenticated requests. This was found during the September 2026 shutdown review and fixed in the final commit (backend middleware plus the admin client now sends the JWT). The fix was never deployed because the services were retired.
 
 ### Poll System
 * `GET /api/poll/active-issues` - Get active poll issues (public)

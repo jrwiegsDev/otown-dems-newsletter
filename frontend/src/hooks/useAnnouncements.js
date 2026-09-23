@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@chakra-ui/react';
 import * as announcementService from '../services/announcementService';
 
-export const useAnnouncements = () => {
+export const useAnnouncements = (user) => {
   const [announcements, setAnnouncements] = useState([]);
   const [isLoadingAnnouncements, setIsLoadingAnnouncements] = useState(true);
   const toast = useToast();
@@ -31,7 +31,7 @@ export const useAnnouncements = () => {
   // Create a new announcement
   const createAnnouncement = async (announcementData) => {
     try {
-      await announcementService.createAnnouncement(announcementData);
+      await announcementService.createAnnouncement(announcementData, user?.token);
       toast({
         title: 'Announcement Posted!',
         description: 'Your announcement is now live on the OADC site.',
@@ -55,7 +55,7 @@ export const useAnnouncements = () => {
   // Update an announcement
   const updateAnnouncement = async (id, announcementData) => {
     try {
-      await announcementService.updateAnnouncement(id, announcementData);
+      await announcementService.updateAnnouncement(id, announcementData, user?.token);
       toast({
         title: 'Announcement Updated',
         description: 'The announcement has been updated successfully.',
@@ -79,7 +79,7 @@ export const useAnnouncements = () => {
   // Delete an announcement
   const deleteAnnouncement = async (id) => {
     try {
-      await announcementService.deleteAnnouncement(id);
+      await announcementService.deleteAnnouncement(id, user?.token);
       toast({
         title: 'Announcement Deleted',
         description: 'The announcement has been removed.',

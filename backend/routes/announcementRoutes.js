@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();
 const Announcement = require('../models/announcementModel');
 const ArchivedAnnouncement = require('../models/archivedAnnouncementModel');
+const { protect } = require('../middleware/authMiddleware');
 
 // Auto-archive any announcements created in a previous calendar month.
 // As soon as the month rolls over, anything from prior months gets copied
@@ -89,8 +90,8 @@ router.get('/', async (req, res) => {
 
 // @route   GET /api/announcements/archived
 // @desc    Get all archived announcements (raw)
-// @access  Private (should be protected by auth middleware)
-router.get('/archived', async (req, res) => {
+// @access  Private
+router.get('/archived', protect, async (req, res) => {
   try {
     await archivePastMonthAnnouncements();
     const archivedAnnouncements = await ArchivedAnnouncement.find().sort({ archivedAt: -1 });
@@ -102,8 +103,8 @@ router.get('/archived', async (req, res) => {
 
 // @route   POST /api/announcements
 // @desc    Create a new announcement
-// @access  Private (should be protected by auth middleware)
-router.post('/', async (req, res) => {
+// @access  Private
+router.post('/', protect, async (req, res) => {
   try {
     const { title, content, image, expiresAt } = req.body;
 
@@ -133,8 +134,8 @@ router.post('/', async (req, res) => {
 
 // @route   PUT /api/announcements/:id
 // @desc    Update an announcement
-// @access  Private (should be protected by auth middleware)
-router.put('/:id', async (req, res) => {
+// @access  Private
+router.put('/:id', protect, async (req, res) => {
   try {
     const { title, content, image, expiresAt } = req.body;
 
@@ -165,8 +166,8 @@ router.put('/:id', async (req, res) => {
 // @desc    Archive (preserve) the announcement, then remove from the live
 // @desc    collection. Deleted announcements show up in the Past tab so
 // @desc    nothing is permanently lost.
-// @access  Private (should be protected by auth middleware)
-router.delete('/:id', async (req, res) => {
+// @access  Private
+router.delete('/:id', protect, async (req, res) => {
   try {
     const announcement = await Announcement.findById(req.params.id);
 
